@@ -207,18 +207,12 @@ emacs.defun(get_type, 1):
 
 emacs.defun(is_true, 1):
   ## Returns ``t`` if argument is non-nil, else returns ``nil``.
-  if env.is_not_nil(env, args[0]):
-    env.symT
-  else:
-    env.symNil
+  env.MakeBool(env.is_not_nil(env, args[0]))
 
 emacs.defun(eq, 2):
   ## Returns ``t`` if both arguments are the same Lisp object, else returns ``nil``.
   ## Note that this returns the value of Emacs-Lisp ``eq``, not ``equal``.
-  if env.eq(env, args[0], args[1]):
-    env.symT
-  else:
-    env.symNil
+  env.MakeBool(env.eq(env, args[0], args[1]))
 
 emacs.defun(sum, 2):
   ## Returns the sum of two integers.

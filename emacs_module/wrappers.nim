@@ -195,6 +195,14 @@ proc MakeInteger*(env: ptr emacs_env; i: int; nimAssert = true): emacs_value =
     env.assertSuccessExitStatus
 
 
+proc MakeBool*(env: ptr emacs_env; b: bool): emacs_value =
+  ## Convert a Nim bool to an Emacs-Lisp ``t`` or ``nil``.
+  if b:
+    return env.symT
+  else:
+    return env.symNil
+
+
 # http://phst.github.io/emacs-modules.html#make_function
 # See if the defun template can add more stuff from the suggested
 # defun wrapper.
