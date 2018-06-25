@@ -281,9 +281,11 @@ emacs.defun(hello, 1):
   ## Returns "Hello " prefixed to the passed string argument.
   var l: ptrdiff_t
   if (env.copy_string_contents(env, args[0], nil, addr l)): # Get the length of the elisp string args[0] (it's num chars + 1).
-    var name = newString(l-1) # So the actual string length is l-1. Allocate that much space for the name string in Nim.
+    var name = newString(l)
     if (env.copy_string_contents(env, args[0], addr name[0], addr l)): # *Now* copy the elisp string args[0] to Nim string name.
-      var res = "Hello " & name # Create a new Nim string res using the name string.
+      # This name var will always have null-termination as the last
+      # character. So remove that first, and then prepend "Hello " to that.
+      var res = "Hello " & name[0 ..< name.high] # Create a new Nim string res using the name string.
       return env.make_string(env, addr res[0], res.len) # Convert the Nim string res to elisp string before returning.
 
 from osproc import execCmdEx
@@ -292,9 +294,9 @@ emacs.defun(uname, 1):
   ## Returns the output of the ``uname`` command run the passed string argument.
   var l: ptrdiff_t
   if (env.copy_string_contents(env, args[0], nil, addr l)):
-    var unameArg = newString(l-1)
+    var unameArg = newString(l)
     if (env.copy_string_contents(env, args[0], addr unameArg[0], addr l)):
-      var (res, _) = execCmdEx("uname " & unameArg)
+      var (res, _) = execCmdEx("uname " & unameArg[0 ..< unameArg.high])
       res = res.strip()
       result = env.make_string(env, addr res[0], res.len)
 

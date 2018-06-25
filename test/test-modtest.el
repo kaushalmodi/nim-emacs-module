@@ -131,7 +131,8 @@
 
 (ert-deftest modtest-string ()
   (should (string= "The quick brown fox jumped over the lazy dog." (modtest-lazy)))
-  (should (string= "Hello World" (modtest-hello "World"))))
+  (should (string= "Hello World" (modtest-hello "World")))
+  (should (string= "Hello " (modtest-hello ""))))
 
 (ert-deftest modtest-uname ()
   (let ((ref-uname-a-output (progn
