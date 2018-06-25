@@ -103,13 +103,13 @@ emacs.defun(globref_make, 0):
 emacs.defun(signal, 0):
   assert(env.non_local_exit_check(env) == emacs_funcall_exit_return)
   env.non_local_exit_signal(env, env.intern(env, "error"),
-                            env.make_integer(env, 100))
+                            MakeInteger(env, 100))
 
 # non_local_exit_check, non_local_exit_throw
 emacs.defun(throw, 0):
   assert(env.non_local_exit_check(env) == emacs_funcall_exit_return)
   env.non_local_exit_throw(env, env.intern(env, "tag"),
-                           env.make_integer(env, 42))
+                           MakeInteger(env, 42))
   result = env.intern(env, "nil")
 
 # non_local_exit_get, non_local_exit_clear
@@ -239,14 +239,15 @@ emacs.defun(sum, 2):
   let
     a = ExtractInteger(env, args[0])
     b = ExtractInteger(env, args[1])
-  env.make_integer(env, a + b)
+  MakeInteger(env, a + b)
 
 emacs.defun(sum_no_nim_assert, 2):
   ## Returns the sum of two integers.
   let
-    a = ExtractInteger(env, args[0], false)
-    b = ExtractInteger(env, args[1], false)
-  env.make_integer(env, a + b)
+    nimAssert = false
+    a = ExtractInteger(env, args[0], nimAssert)
+    b = ExtractInteger(env, args[1], nimAssert)
+  MakeInteger(env, a + b, nimAssert)
 
 emacs.defun(sum_float, 2):
   ## Returns the sum of two floats.

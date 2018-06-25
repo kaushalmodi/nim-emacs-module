@@ -17,7 +17,7 @@ proc clearExitStatus*(env: ptr emacs_env) =
 
 
 proc copyStrNoAssert(env: ptr emacs_env; elispStr: emacs_value): string =
-  ## Copy Emacs-Lisp string ``elispStr`` to a Nim string and return it.
+  ## Copy Emacs-Lisp string ``elispStr`` to a Nim string, and return it.
   var
     l: ptrdiff_t
   # Get the length of the elisp string elispStr. It's num chars + 1
@@ -80,7 +80,7 @@ proc assertSuccessExitStatus*(env: ptr emacs_env) =
 
 # http://phst.github.io/emacs-modules.html#copy_string_contents
 proc CopyStringContents*(env: ptr emacs_env; elispStr: emacs_value): string =
-  ## Copy Emacs-Lisp string ``elispStr`` to a Nim string and return it.
+  ## Copy Emacs-Lisp string ``elispStr`` to a Nim string, and return it.
   var
     l: ptrdiff_t
   # Get the length of the elisp string elispStr. It's num chars + 1
@@ -102,7 +102,7 @@ proc CopyStringContents*(env: ptr emacs_env; elispStr: emacs_value): string =
 
 # http://phst.github.io/emacs-modules.html#how-to-deal-with-nonlocal-exits-properly
 proc ExtractInteger*(env: ptr emacs_env; inp: emacs_value; nimAssert = true): int =
-  ## Convert Emacs-Lisp integer to an int in Nim and return it.
+  ## Convert Emacs-Lisp integer to an int in Nim, and return it.
   if nimAssert:
     let
       inpType = typeOfEmacsValue(env, inp)
@@ -116,14 +116,11 @@ proc ExtractInteger*(env: ptr emacs_env; inp: emacs_value; nimAssert = true): in
     result = int(env.extract_integer(env, inp))
 
 
-# http://phst.github.io/emacs-modules.html#how-to-deal-with-nonlocal-exits-properly
-proc putExit*(env: ptr emacs_env): emacs_value =
-  discard
-
-
-# http://phst.github.io/emacs-modules.html#how-to-deal-with-nonlocal-exits-properly
-proc MakeInteger*(env: ptr emacs_env): emacs_value =
-  discard
+proc MakeInteger*(env: ptr emacs_env; i: int; nimAssert = true): emacs_value =
+  ## Convert a Nim int to an Emacs-Lisp integer, and return it.
+  result = env.make_integer(env, cast[intmax_t](i))
+  if nimAssert:
+    env.assertSuccessExitStatus
 
 
 # http://phst.github.io/emacs-modules.html#make_string
