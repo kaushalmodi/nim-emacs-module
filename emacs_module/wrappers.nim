@@ -36,7 +36,7 @@ proc copyStrNoAssert(env: ptr emacs_env; elispStr: emacs_value): string =
 
 
 proc symbolName(env: ptr emacs_env; sym: emacs_value): string =
-  ## Return the name of the input Emacs-Lisp symbol
+  ## Return the string name for the input Emacs-Lisp symbol.
   let
     fSym = env.intern(env, "symbol-name")
   var
@@ -49,11 +49,7 @@ proc typeOfEmacsValue(env: ptr emacs_env; val: emacs_value): string =
   ## Return the type of the input Emacs-Lisp value as string.
   let
     typeSym: emacs_value = env.type_of(env, val)
-    fSym = env.intern(env, "symbol-name")
-  var
-    listArgs: array[1, emacs_value] = [typeSym]
-    elispStr = env.funcall(env, fSym, 1, addr listArgs[0])
-  return copyStrNoAssert(env, elispStr)
+  return symbolName(env, typeSym)
 
 
 proc assertSuccessExitStatus*(env: ptr emacs_env) =
