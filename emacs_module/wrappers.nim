@@ -16,7 +16,7 @@ proc clearExitStatus*(env: ptr emacs_env) =
   env.non_local_exit_clear(env)
 
 
-proc copyStrNoExitStatusAssert(env: ptr emacs_env; elispStr: emacs_value): string =
+proc copyStrNoAssert(env: ptr emacs_env; elispStr: emacs_value): string =
   ## Copy Emacs-Lisp string ``elispStr`` to a Nim string and return it.
   var
     l: ptrdiff_t
@@ -24,8 +24,7 @@ proc copyStrNoExitStatusAssert(env: ptr emacs_env; elispStr: emacs_value): strin
   # because it includes the null-termination too.
   discard env.copy_string_contents(env, elispStr, nil, addr l)
   if l <= 0:
-    raise newException(StringError, "The length of the string passed from Emacs has to be at least 1 " &
-      "(that includes the null termination), but it was " & $l)
+    return ""
   var
     str = newString(l)
   # *Now* copy the elisp string elispStr to Nim string str.
@@ -42,7 +41,7 @@ proc symbolName(env: ptr emacs_env; sym: emacs_value): string =
   var
     listArgs: array[1, emacs_value] = [sym]
     elispStr = env.funcall(env, fSym, 1, addr listArgs[0])
-  return copyStrNoExitStatusAssert(env, elispStr)
+  return copyStrNoAssert(env, elispStr)
 
 
 proc typeOfEmacsValue(env: ptr emacs_env; val: emacs_value): string =
@@ -53,7 +52,7 @@ proc typeOfEmacsValue(env: ptr emacs_env; val: emacs_value): string =
   var
     listArgs: array[1, emacs_value] = [typeSym]
     elispStr = env.funcall(env, fSym, 1, addr listArgs[0])
-  return copyStrNoExitStatusAssert(env, elispStr)
+  return copyStrNoAssert(env, elispStr)
 
 
 proc assertSuccessExitStatus*(env: ptr emacs_env) =
@@ -65,11 +64,18 @@ proc assertSuccessExitStatus*(env: ptr emacs_env) =
     exitStatus: emacs_funcall_exit = env.non_local_exit_get(env,
                                                             addr exitSymbol,
                                                             addr exitData)
-  # echo $exitStatus, ", ", typeOfEmacsValue(env, exitSymbol), ", ", typeOfEmacsValue(env, exitData)
   if not (exitStatus == emacs_funcall_exit_return):
+    var
+      exitSymbolStr, exitDataStr = ""
+    if typeOfEmacsValue(env, exitSymbol) == "symbol":
+      exitSymbolStr = "[" & symbolName(env, exitSymbol) & "]"
+    if typeOfEmacsValue(env, exitData) == "symbol":
+      exitDataStr = symbolName(env, exitData)
     raise newException(NonZeroExitStatus, "Non-zero exit status " &
       $exitStatus &
-      " (" & $ord(exitStatus) & ") detected")
+      " (" & $ord(exitStatus) & "): " &
+      exitSymbolStr &
+      exitDataStr)
 
 
 # http://phst.github.io/emacs-modules.html#copy_string_contents
