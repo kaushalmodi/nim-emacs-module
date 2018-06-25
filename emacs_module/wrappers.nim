@@ -129,6 +129,27 @@ proc symT*(env: ptr emacs_env): emacs_value =
   return Intern(env, "t", nimAssert = false)
 
 
+proc Funcall*(env: ptr emacs_env; fName: string): emacs_value =
+  ## Return ``funcall`` of ``(fName)`` from Emacs-Lisp.
+  let
+    fSym = Intern(env, fName)
+  result = env.funcall(env, fSym, 0, nil)
+  env.assertSuccessExitStatus
+
+
+# http://phst.github.io/emacs-modules.html#funcall
+proc Funcall*(env: ptr emacs_env; fName: string; listArgs: openArray[emacs_value]): emacs_value =
+  ## Return ``funcall`` of ``fName`` with list of arguments
+  ## ``listArgs`` from Emacs-Lisp.
+  let
+    fSym = Intern(env, fName)
+    nArgs = listArgs.len
+  if nArgs > cast[ptrdiff_t](int.high):
+    raise newException(OverflowError, "Too many arguments")
+  result = env.funcall(env, fSym, nArgs, unsafeAddr listArgs[0])
+  env.assertSuccessExitStatus
+
+
 # http://phst.github.io/emacs-modules.html#copy_string_contents
 proc CopyStringContents*(env: ptr emacs_env; elispStr: emacs_value): string =
   ## Copy Emacs-Lisp string ``elispStr`` to a Nim string, and return it.
@@ -193,9 +214,4 @@ proc defMacro*(env: ptr emacs_env): emacs_value =
 
 # http://phst.github.io/emacs-modules.html#make_function
 proc applyDeclaration*(env: ptr emacs_env): emacs_value =
-  discard
-
-
-# http://phst.github.io/emacs-modules.html#funcall
-proc funcallSymbol*(env: ptr emacs_env): emacs_value =
   discard

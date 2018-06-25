@@ -117,7 +117,9 @@ emacs.defun(non_local_exit_funcall, 1):
   ## Call argument function (which takes 0 arguments), catch all
   ## non-local exists and return either normal result or a list
   ## describing the non-local exit.
-  let elispFuncallRet = env.funcall(env, args[0], 0, nil)
+  let
+    fSym = args[0]
+    elispFuncallRet = env.funcall(env, fSym, 0, nil)
   var
     non_local_exit_symbol, non_local_exit_data: emacs_value
   let exitCode: emacs_funcall_exit =
@@ -130,22 +132,10 @@ emacs.defun(non_local_exit_funcall, 1):
     return elispFuncallRet
   of emacs_funcall_exit_signal:
     env.non_local_exit_clear(env)
-    let
-      Flist = Intern(env, "list")
-    var
-      listArgs: array[3, emacs_value] = [Intern(env, "signal"),
-                                         non_local_exit_symbol,
-                                         non_local_exit_data]
-    return env.funcall(env, Flist, 3, addr listArgs[0])
+    return env.Funcall("list", [Intern(env, "signal"), non_local_exit_symbol, non_local_exit_data])
   of emacs_funcall_exit_throw:
     env.non_local_exit_clear(env)
-    let
-      Flist = Intern(env, "list")
-    var
-      listArgs: array[3, emacs_value] = [Intern(env, "throw"),
-                                         non_local_exit_symbol,
-                                         non_local_exit_data]
-    return env.funcall(env, Flist, 3, addr listArgs[0])
+    return env.Funcall("list", [Intern(env, "throw"), non_local_exit_symbol, non_local_exit_data])
 
 #[
   /* Function registration.  */
