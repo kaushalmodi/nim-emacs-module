@@ -195,6 +195,28 @@ proc MakeInteger*(env: ptr emacs_env; i: int; nimAssert = true): emacs_value =
     env.assertSuccessExitStatus
 
 
+proc ExtractFloat*(env: ptr emacs_env; inp: emacs_value; nimAssert = true): float =
+  ## Convert Emacs-Lisp float to a float in Nim, and return it.
+  if nimAssert:
+    let
+      inpType = typeOfEmacsValue(env, inp)
+    if inpType != "float":
+      raise newException(InputError, "Input value from Emacs is of invalid type; float was expected, but found " &
+        inpType)
+    else:
+      result = float(env.extract_float(env, inp))
+    env.assertSuccessExitStatus
+  else:
+    result = float(env.extract_float(env, inp))
+
+
+proc MakeFloat*(env: ptr emacs_env; f: float; nimAssert = true): emacs_value =
+  ## Convert a Nim float to an Emacs-Lisp float, and return it.
+  result = env.make_float(env, cast[cdouble](f))
+  if nimAssert:
+    env.assertSuccessExitStatus
+
+
 proc MakeBool*(env: ptr emacs_env; b: bool): emacs_value =
   ## Convert a Nim bool to an Emacs-Lisp ``t`` or ``nil``.
   if b:

@@ -126,10 +126,12 @@
 
 (ert-deftest modtest-sum-float ()
   (should (equal 10.0 (modtest-sum-float 3.3 6.7)))
-  (should-error (modtest-sum-float 3.0) :type 'wrong-number-of-arguments)
-  (should-error (modtest-sum-float "1" 2) :type 'wrong-type-argument)
-  (should-error (modtest-sum-float 2 "1") :type 'wrong-type-argument)
-  (should-error (modtest-sum-float 2 1) :type 'wrong-type-argument))
+  (unless (functionp 'modtest-sum-float-no-nim-assert)
+    (defalias 'modtest-sum-float-no-nim-assert 'modtest-sum-float))
+  (should-error (modtest-sum-float-no-nim-assert 3.0) :type 'wrong-number-of-arguments)
+  (should-error (modtest-sum-float-no-nim-assert "1" 2) :type 'wrong-type-argument)
+  (should-error (modtest-sum-float-no-nim-assert 2 "1") :type 'wrong-type-argument)
+  (should-error (modtest-sum-float-no-nim-assert 2 1) :type 'wrong-type-argument))
 
 (ert-deftest modtest-string ()
   (should (string= "The quick brown fox jumped over the lazy dog." (modtest-lazy)))
