@@ -1,6 +1,7 @@
 # Wrapper procs for Emacs Module API, translated from the C code in
 # http://phst.github.io/emacs-modules.html.
 
+from unicode import validateUtf8
 import emacs_module
 
 type
@@ -124,8 +125,20 @@ proc MakeInteger*(env: ptr emacs_env; i: int; nimAssert = true): emacs_value =
 
 
 # http://phst.github.io/emacs-modules.html#make_string
-proc MakeString*(env: ptr emacs_env): emacs_value =
-  discard
+proc MakeString*(env: ptr emacs_env; str: string): emacs_value =
+  ## Convert a Nim string to an Emacs-Lisp string, and return it.
+  let
+    strLen: ptrdiff_t = str.len
+  if strLen > cast[ptrdiff_t](int.high):
+    raise newException(OverflowError, "String size is too large")
+  if str.validateUtf8 != -1:
+    raise newException(StringError, "Input string is not a valid UTF-8 string")
+  # If the below str variable is declared using a let instead of a
+  # var, unsafeAddr has to be used in the make_string call below
+  # instead of addr.
+  var str = str
+  result = env.make_string(env, addr str[0], strLen)
+  env.assertSuccessExitStatus
 
 
 # http://phst.github.io/emacs-modules.html#intern

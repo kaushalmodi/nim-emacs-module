@@ -57,7 +57,7 @@ emacs.defun(globref_make, 0):
   var str: string = ""
   for i in 0 ..< (26 * 100):
     str.add(char('a'.ord + (i mod 26)))
-  let lispStr = env.make_string(env, addr str[0], str.len)
+  let lispStr = MakeString(env, str)
   return env.make_global_ref(env, lispStr)
 
 #[
@@ -266,19 +266,15 @@ emacs.defun(sum_float, 2):
 # make_string
 emacs.defun(lazy, 0):
   ## Returns a string constant.
-  var str = "The quick brown fox jumped over the lazy dog."
-  return env.make_string(env, addr str[0], str.len)
+  return MakeString(env, "The quick brown fox jumped over the lazy dog.")
 
 # CopyStringContents
 emacs.defun(hello, 1):
   ## Returns "Hello " prefixed to the passed string argument.
   let
     name = CopyStringContents(env, args[0])
-  # If this res variable is a let instead of a var, unsafeAddr has to
-  # be used below instead of addr.
-  var
     res = "Hello " & name
-  return env.make_string(env, addr res[0], res.len)
+  return MakeString(env, res)
 
 from osproc import execCmdEx
 from strutils import strip
@@ -289,7 +285,7 @@ emacs.defun(uname, 1):
   var
     (res, _) = execCmdEx("uname " & unameArg)
   res = res.strip()
-  return env.make_string(env, addr res[0], res.len)
+  return MakeString(env, res)
 
 # /* Return a copy of the argument string where every 'a' is replaced
 #    with 'b'.  */
