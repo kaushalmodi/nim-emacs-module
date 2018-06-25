@@ -93,12 +93,15 @@ template provide*(self: Emacs) {.dirty.} =
   {.emit: temp.}
 
 
-template init*(sym: untyped) {.dirty.} =
+template init*(sym: untyped, libNameCustom = "") {.dirty.} =
   from os import splitFile
 
   static:
     var `sym` = Emacs()
     let info = instantiationInfo()
     sym.functions = ""
-    # If the file name is foo.nim, let the libary name to foo.
-    sym.libName = splitFile(info.filename).name
+    when libNameCustom == "":
+      # If the file name is foo.nim, let the libary name to foo.
+      sym.libName = splitFile(info.filename).name
+    else:
+      sym.libName = libNameCustom

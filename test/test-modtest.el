@@ -1,4 +1,4 @@
-;;; test-modtest.el --- test modtest.nim -*- lexical-binding: t; -*-
+;;; test-modtest.el --- test modtest.nim and modtest2.nim -*- lexical-binding: t; -*-
 
 ;; Author: Kaushal Modi <kaushal.modi@gmail.com>
 

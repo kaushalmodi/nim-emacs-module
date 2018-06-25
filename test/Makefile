@@ -37,9 +37,16 @@ test_modtest:
 	$(EMACS) --batch -L . $(LOADPATH) -l test-modtest.el -f ert-run-tests-batch-and-exit
 
 
+## modtest2
+modtest2: clean modtest2.so test_modtest
+
+modtest2.so: modtest2.nim # Below the output .so file name is modtest.so intentionally
+	nim c --out:modtest.so --app:lib $(NIM_CFLAGS) $<
+
+
 clean:
 	rm -fr nimcache *.so
 
 test: test_return42 test_sample test_modtest
 
-all: return42 sample modtest
+all: return42 sample modtest modtest2
