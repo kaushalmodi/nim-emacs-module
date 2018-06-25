@@ -35,3 +35,55 @@ proc copyStringContents*(env: ptr emacs_env; elispStr: emacs_value): string =
   # Return the string without the null termination i.e. without the
   # last character.
   return str[0 ..< str.high]
+
+
+# http://phst.github.io/emacs-modules.html#how-to-deal-with-nonlocal-exits-properly
+proc extractInteger*(env: ptr emacs_env): emacs_value =
+  discard
+
+
+# http://phst.github.io/emacs-modules.html#how-to-deal-with-nonlocal-exits-properly
+proc putExit*(env: ptr emacs_env): emacs_value =
+  discard
+
+
+# http://phst.github.io/emacs-modules.html#how-to-deal-with-nonlocal-exits-properly
+proc makeInteger*(env: ptr emacs_env): emacs_value =
+  discard
+
+
+# http://phst.github.io/emacs-modules.html#make_string
+proc makeString*(env: ptr emacs_env): emacs_value =
+  discard
+
+
+# http://phst.github.io/emacs-modules.html#intern
+proc intern*(env: ptr emacs_env): emacs_value =
+  discard
+
+
+# http://phst.github.io/emacs-modules.html#make_function
+# See if the defun template can add more stuff from the suggested
+# defun wrapper.
+# proc defun*(env: ptr emacs_env): emacs_value =
+#   discard
+
+
+# http://phst.github.io/emacs-modules.html#make_function
+proc defunInteractive*(env: ptr emacs_env): emacs_value =
+  discard
+
+
+# http://phst.github.io/emacs-modules.html#make_function
+proc defMacro*(env: ptr emacs_env): emacs_value =
+  discard
+
+
+# http://phst.github.io/emacs-modules.html#make_function
+proc applyDeclaration*(env: ptr emacs_env): emacs_value =
+  discard
+
+
+# http://phst.github.io/emacs-modules.html#funcall
+proc funcallSymbol*(env: ptr emacs_env): emacs_value =
+  discard
