@@ -108,8 +108,8 @@ emacs.defun(signal, 0):
 # non_local_exit_check, non_local_exit_throw
 emacs.defun(throw, 0):
   assert(env.non_local_exit_check(env) == emacs_funcall_exit_return)
-  env.non_local_exit_throw(env, Intern(env, "tag"),
-                           MakeInteger(env, 42))
+  env.non_local_exit_throw(env, toEmacsValue(env, "'tag"), # testing toEmacsValue
+                           toEmacsValue(env, 42))          # testing toEmacsValue
   return env.symNil
 
 # non_local_exit_get, non_local_exit_clear
@@ -212,7 +212,7 @@ emacs.defun(is_true, 1):
 emacs.defun(eq, 2):
   ## Returns ``t`` if both arguments are the same Lisp object, else returns ``nil``.
   ## Note that this returns the value of Emacs-Lisp ``eq``, not ``equal``.
-  env.MakeBool(env.eq(env, args[0], args[1]))
+  env.toEmacsValue(env.eq(env, args[0], args[1])) # testing toEmacsValue
 
 emacs.defun(sum, 2):
   ## Returns the sum of two integers.
@@ -246,7 +246,7 @@ emacs.defun(sum_float_no_nim_assert, 2):
     nimAssert = false
     a = ExtractFloat(env, args[0], nimAssert)
     b = ExtractFloat(env, args[1], nimAssert)
-  MakeFloat(env, a + b, nimAssert)
+  toEmacsValue(env, a + b, nimAssert) # testing toEmacsValue
 
 #[
   /* Create a Lisp string from a utf8 encoded string.  */
@@ -266,7 +266,7 @@ emacs.defun(hello, 1):
   let
     name = CopyStringContents(env, args[0])
     res = "Hello " & name
-  return MakeString(env, res)
+  return toEmacsValue(env, res) # testing toEmacsValue
 
 from osproc import execCmdEx
 from strutils import strip

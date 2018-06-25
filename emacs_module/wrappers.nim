@@ -117,6 +117,16 @@ proc Intern*(env: ptr emacs_env; symbolName: string; nimAssert = true): emacs_va
     result = env.funcall(env, fSym, 1, addr listArgs[0])
   if nimAssert:
     env.assertSuccessExitStatus
+proc toEmacsValue*(env: ptr emacs_env; inp: string; nimAssert = true): emacs_value =
+  ## Convert a Nim string to an Emacs-Lisp string, and return it.  If
+  ## the string begins with a single-quote, return its interned value
+  ## instead.
+  let
+    hasQuotePrefix = (inp.len >= 2) and (inp[0] == '\39')
+  if hasQuotePrefix:
+    return env.Intern(inp[1 .. inp.high], nimAssert)
+  else:
+    return env.MakeString(inp)
 
 
 proc symNil*(env: ptr emacs_env): emacs_value =
@@ -193,6 +203,9 @@ proc MakeInteger*(env: ptr emacs_env; i: int; nimAssert = true): emacs_value =
   result = env.make_integer(env, cast[intmax_t](i))
   if nimAssert:
     env.assertSuccessExitStatus
+proc toEmacsValue*(env: ptr emacs_env; inp: int; nimAssert = true): emacs_value =
+  ## Convert a Nim int to an Emacs-Lisp integer, and return it.
+  return env.MakeInteger(inp, nimAssert)
 
 
 proc ExtractFloat*(env: ptr emacs_env; inp: emacs_value; nimAssert = true): float =
@@ -215,6 +228,9 @@ proc MakeFloat*(env: ptr emacs_env; f: float; nimAssert = true): emacs_value =
   result = env.make_float(env, cast[cdouble](f))
   if nimAssert:
     env.assertSuccessExitStatus
+proc toEmacsValue*(env: ptr emacs_env; inp: float; nimAssert = true): emacs_value =
+  ## Convert a Nim float to an Emacs-Lisp float, and return it.
+  return env.MakeFloat(inp, nimAssert)
 
 
 proc MakeBool*(env: ptr emacs_env; b: bool): emacs_value =
@@ -223,6 +239,9 @@ proc MakeBool*(env: ptr emacs_env; b: bool): emacs_value =
     return env.symT
   else:
     return env.symNil
+proc toEmacsValue*(env: ptr emacs_env; inp: bool): emacs_value =
+  ## Convert a Nim bool to an Emacs-Lisp ``t`` or ``nil``.
+  return env.MakeBool(inp)
 
 
 # http://phst.github.io/emacs-modules.html#make_function
