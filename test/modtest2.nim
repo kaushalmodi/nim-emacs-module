@@ -237,8 +237,15 @@ emacs.defun(sum, 2):
   # "wrong-number-of-arguments" error signal before the execution
   # reaches this assert statement.
   let
-    a = env.extract_integer(env, args[0])
-    b = env.extract_integer(env, args[1])
+    a = ExtractInteger(env, args[0])
+    b = ExtractInteger(env, args[1])
+  env.make_integer(env, a + b)
+
+emacs.defun(sum_no_nim_assert, 2):
+  ## Returns the sum of two integers.
+  let
+    a = ExtractInteger(env, args[0], false)
+    b = ExtractInteger(env, args[1], false)
   env.make_integer(env, a + b)
 
 emacs.defun(sum_float, 2):
@@ -261,11 +268,11 @@ emacs.defun(lazy, 0):
   var str = "The quick brown fox jumped over the lazy dog."
   return env.make_string(env, addr str[0], str.len)
 
-# copyStringContents
+# CopyStringContents
 emacs.defun(hello, 1):
   ## Returns "Hello " prefixed to the passed string argument.
   let
-    name = copyStringContents(env, args[0])
+    name = CopyStringContents(env, args[0])
   # If this res variable is a let instead of a var, unsafeAddr has to
   # be used below instead of addr.
   var
@@ -277,7 +284,7 @@ from strutils import strip
 emacs.defun(uname, 1):
   ## Returns the output of the ``uname`` command run the passed string argument.
   let
-    unameArg = copyStringContents(env, args[0])
+    unameArg = CopyStringContents(env, args[0])
   var
     (res, _) = execCmdEx("uname " & unameArg)
   res = res.strip()
