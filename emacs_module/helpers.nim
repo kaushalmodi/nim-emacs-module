@@ -36,7 +36,7 @@ template defun*(self: Emacs; fsym: untyped; max_args: int; body: untyped) {.dirt
     self.pushFunction(astToStr(fsym), max_args)
 
   proc `fsym`*(env: ptr emacs_env, nargs: ptrdiff_t,
-               args: ptr array[0..max_args, emacs_value],
+               args: ptr array[max_args, emacs_value],
                data: pointer): emacs_value {.exportc,extern: "nimEmacs_" & self.libName & "_$1".} =
     body
 
