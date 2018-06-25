@@ -75,6 +75,60 @@ proc assertSuccessExitStatus*(env: ptr emacs_env) =
       exitDataStr)
 
 
+# http://phst.github.io/emacs-modules.html#make_string
+proc MakeString*(env: ptr emacs_env; str: string): emacs_value =
+  ## Convert a Nim string to an Emacs-Lisp string, and return it.
+  let
+    strLen: ptrdiff_t = str.len
+  if strLen > cast[ptrdiff_t](int.high):
+    raise newException(OverflowError, "String size is too large")
+  if str.validateUtf8 != -1:
+    raise newException(StringError, "Input string is not a valid UTF-8 string")
+  # If the below str variable is declared using a let instead of a
+  # var, unsafeAddr has to be used in the make_string call below
+  # instead of addr.
+  var str = str
+  result = env.make_string(env, addr str[0], strLen)
+  env.assertSuccessExitStatus
+
+
+# http://phst.github.io/emacs-modules.html#intern
+proc Intern*(env: ptr emacs_env; symbolName: string; nimAssert = true): emacs_value =
+  ## Return the Emacs-Lisp symbol for the input ``symbolName`` string.
+  ##
+  ## Call ``intern`` in the env object directly only if the
+  ## ``symbolName`` string contains only ASCII characters
+  ## (i.e. characters in the range from 1 to 127); otherwise call the
+  ## ``intern`` function within Emacs via ``funcall``.
+  var
+    simple = true
+  for c in symbolName:
+    if ord(c) < 1 or ord(c) > 127:
+      simple = false
+      break
+  if simple:
+    result = env.intern(env, symbolName)
+  else:
+    let
+      fSym = Intern(env, "intern")
+      elispStr = MakeString(env, symbolName)
+    var
+      listArgs: array[1, emacs_value] = [elispStr]
+    result = env.funcall(env, fSym, 1, addr listArgs[0])
+  if nimAssert:
+    env.assertSuccessExitStatus
+
+
+proc symNil*(env: ptr emacs_env): emacs_value =
+  ## Return Emacs-Lisp ``nil`` symbol.
+  return Intern(env, "nil", nimAssert = false)
+
+
+proc symT*(env: ptr emacs_env): emacs_value =
+  ## Return Emacs-Lisp ``t`` symbol.
+  return Intern(env, "t", nimAssert = false)
+
+
 # http://phst.github.io/emacs-modules.html#copy_string_contents
 proc CopyStringContents*(env: ptr emacs_env; elispStr: emacs_value): string =
   ## Copy Emacs-Lisp string ``elispStr`` to a Nim string, and return it.
@@ -118,28 +172,6 @@ proc MakeInteger*(env: ptr emacs_env; i: int; nimAssert = true): emacs_value =
   result = env.make_integer(env, cast[intmax_t](i))
   if nimAssert:
     env.assertSuccessExitStatus
-
-
-# http://phst.github.io/emacs-modules.html#make_string
-proc MakeString*(env: ptr emacs_env; str: string): emacs_value =
-  ## Convert a Nim string to an Emacs-Lisp string, and return it.
-  let
-    strLen: ptrdiff_t = str.len
-  if strLen > cast[ptrdiff_t](int.high):
-    raise newException(OverflowError, "String size is too large")
-  if str.validateUtf8 != -1:
-    raise newException(StringError, "Input string is not a valid UTF-8 string")
-  # If the below str variable is declared using a let instead of a
-  # var, unsafeAddr has to be used in the make_string call below
-  # instead of addr.
-  var str = str
-  result = env.make_string(env, addr str[0], strLen)
-  env.assertSuccessExitStatus
-
-
-# http://phst.github.io/emacs-modules.html#intern
-proc Intern*(env: ptr emacs_env): emacs_value =
-  discard
 
 
 # http://phst.github.io/emacs-modules.html#make_function

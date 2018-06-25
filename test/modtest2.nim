@@ -102,15 +102,15 @@ emacs.defun(globref_make, 0):
 # non_local_exit_check, non_local_exit_signal
 emacs.defun(signal, 0):
   assert(env.non_local_exit_check(env) == emacs_funcall_exit_return)
-  env.non_local_exit_signal(env, env.intern(env, "error"),
+  env.non_local_exit_signal(env, Intern(env, "error"),
                             MakeInteger(env, 100))
 
 # non_local_exit_check, non_local_exit_throw
 emacs.defun(throw, 0):
   assert(env.non_local_exit_check(env) == emacs_funcall_exit_return)
-  env.non_local_exit_throw(env, env.intern(env, "tag"),
+  env.non_local_exit_throw(env, Intern(env, "tag"),
                            MakeInteger(env, 42))
-  result = env.intern(env, "nil")
+  return env.symNil
 
 # non_local_exit_get, non_local_exit_clear
 emacs.defun(non_local_exit_funcall, 1):
@@ -131,18 +131,18 @@ emacs.defun(non_local_exit_funcall, 1):
   of emacs_funcall_exit_signal:
     env.non_local_exit_clear(env)
     let
-      Flist = env.intern(env, "list")
+      Flist = Intern(env, "list")
     var
-      listArgs: array[3, emacs_value] = [env.intern(env, "signal"),
+      listArgs: array[3, emacs_value] = [Intern(env, "signal"),
                                          non_local_exit_symbol,
                                          non_local_exit_data]
     return env.funcall(env, Flist, 3, addr listArgs[0])
   of emacs_funcall_exit_throw:
     env.non_local_exit_clear(env)
     let
-      Flist = env.intern(env, "list")
+      Flist = Intern(env, "list")
     var
-      listArgs: array[3, emacs_value] = [env.intern(env, "throw"),
+      listArgs: array[3, emacs_value] = [Intern(env, "throw"),
                                          non_local_exit_symbol,
                                          non_local_exit_data]
     return env.funcall(env, Flist, 3, addr listArgs[0])
@@ -177,12 +177,12 @@ emacs.defun(non_local_exit_funcall, 1):
 emacs.defun(make_string, 2):
   ## Returns string created by Emacs-Lisp ``make-string``.
   let
-    fSymbol = env.intern(env, "make-string") # Get 'make-string
+    fSymbol = Intern(env, "make-string") # Get 'make-string
   return env.funcall(env, fSymbol, nargs, addr args[0]) # Return the (funcall make-string ..) returned elisp string
 
 emacs.defun(return_t, 1):
   ## Returns ``t``, always.
-  env.intern(env, "t")
+  env.symT
 
 #[
   /* Type conversion.  */
@@ -218,17 +218,17 @@ emacs.defun(get_type, 1):
 emacs.defun(is_true, 1):
   ## Returns ``t`` if argument is non-nil, else returns ``nil``.
   if env.is_not_nil(env, args[0]):
-    env.intern(env, "t")
+    env.symT
   else:
-    env.intern(env, "nil")
+    env.symNil
 
 emacs.defun(eq, 2):
   ## Returns ``t`` if both arguments are the same Lisp object, else returns ``nil``.
   ## Note that this returns the value of Emacs-Lisp ``eq``, not ``equal``.
   if env.eq(env, args[0], args[1]):
-    env.intern(env, "t")
+    env.symT
   else:
-    env.intern(env, "nil")
+    env.symNil
 
 emacs.defun(sum, 2):
   ## Returns the sum of two integers.
@@ -424,8 +424,8 @@ emacs.defun(vector_eq, 2):
     size = env.vec_size(env, vec)
   for i in 0 ..< size:
     if not env.eq(env, env.vec_get(env, vec, i), val):
-      result = env.intern(env, "nil")
-  result = env.intern(env, "t")
+      result = env.symNil
+  result = env.symT
 
 # vec_size, vec_set
 emacs.defun(vector_fill, 2):
@@ -436,7 +436,7 @@ emacs.defun(vector_fill, 2):
 
   for i in 0 ..< size:
     env.vec_set(env, vec, i, val)
-  result = env.intern(env, "t")
+  result = env.symT
 
 #[
   /* Returns whether a quit is pending.  */
