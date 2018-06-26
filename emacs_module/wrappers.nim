@@ -5,6 +5,12 @@ from unicode import validateUtf8
 import emacs_module
 
 
+const
+  IntErrorReturn: int = -1
+  FloatErrorReturn: float = -1.0
+  BoolErrorReturn: bool = false
+
+
 # Forward declarations
 proc symNil*(env: ptr emacs_env): emacs_value
 proc MakeList*(env: ptr emacs_env; listArray: openArray[emacs_value]): emacs_value
@@ -216,13 +222,13 @@ proc CopyStringContents*(env: ptr emacs_env; elispStr: emacs_value): string =
 proc ExtractInteger*(env: ptr emacs_env; inp: emacs_value; internalCall = false): int =
   ## Convert Emacs-Lisp integer to an int in Nim, and return it.
   if not isSuccessExitStatus(env):
-    return
+    return IntErrorReturn
   if not internalCall: # Break recursive call when called from strEmacsValue
     if not typeCheck(env, inp, "integer"):
-      return
+      return IntErrorReturn
   result = int(env.extract_integer(env, inp))
   if not isSuccessExitStatus(env):
-    return
+    return IntErrorReturn
 
 
 proc MakeInteger*(env: ptr emacs_env; i: int): emacs_value =
@@ -240,13 +246,13 @@ proc toEmacsValue*(env: ptr emacs_env; inp: int): emacs_value =
 proc ExtractFloat*(env: ptr emacs_env; inp: emacs_value; internalCall = false): float =
   ## Convert Emacs-Lisp float to a float in Nim, and return it.
   if not isSuccessExitStatus(env):
-    return
+    return FloatErrorReturn
   if not internalCall: # Break recursive call when called from strEmacsValue
     if not typeCheck(env, inp, "float"):
-      return
+      return FloatErrorReturn
   result = float(env.extract_float(env, inp))
   if not isSuccessExitStatus(env):
-    return
+    return FloatErrorReturn
 
 
 proc MakeFloat*(env: ptr emacs_env; f: float): emacs_value =
@@ -265,10 +271,10 @@ proc ExtractBool*(env: ptr emacs_env; inp: emacs_value): bool =
   ## Convert Emacs-Lisp ``nil`` to ``false`` in Nim, and return it.
   ## The returned value is ``true`` otherwise.
   if not isSuccessExitStatus(env):
-    return
-  result = true
-  if (typeOfEmacsValue(env, inp) == "symbol") and (symbolName(env, inp) == "nil"):
-    result = false
+    return BoolErrorReturn
+  result = env.is_not_nil(env, inp)
+  if not isSuccessExitStatus(env):
+    return BoolErrorReturn
 
 
 proc MakeBool*(env: ptr emacs_env; b: bool): emacs_value =

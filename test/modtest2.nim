@@ -198,7 +198,7 @@ emacs.defun(get_type, 1):
 
 emacs.defun(is_true, 1):
   ## Returns ``t`` if argument is non-nil, else returns ``nil``.
-  env.MakeBool(env.is_not_nil(env, args[0]))
+  MakeBool(env, ExtractBool(env, args[0]))
 
 emacs.defun(make_cons, 2):
   ## Returns a cons made of the two input arguments.
