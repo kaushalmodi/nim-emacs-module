@@ -279,6 +279,11 @@ proc MakeList*(env: ptr emacs_env; listArray: openArray[emacs_value]): emacs_val
   Funcall(env, "list", listArray)
 
 
+proc MakeCons*(env: ptr emacs_env; consCar, consCdr: emacs_value): emacs_value =
+  ## Return an Emacs-Lisp ``cons``.
+  Funcall(env, "cons", [consCar, consCdr])
+
+
 proc strEmacsValue(env: ptr emacs_env; x: emacs_value): string =
   ## Get stringified form of ``emacs_value``.
   let t = typeOfEmacsValue(env, x)

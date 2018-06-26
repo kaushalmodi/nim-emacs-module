@@ -134,6 +134,11 @@
   (should (string= "Hello World" (modtest-hello "World")))
   (should (string= "Hello " (modtest-hello ""))))
 
+(when (fboundp #'modtest-make-cons)
+  (ert-deftest modtest-cons ()
+    (should (equal '(1 . 2) (modtest-make-cons 1 2)))
+    (should (equal '("a" . 123) (modtest-make-cons "a" 123)))))
+
 (ert-deftest modtest-uname ()
   (let ((ref-uname-a-output (progn
                               (require 'subr-x)
