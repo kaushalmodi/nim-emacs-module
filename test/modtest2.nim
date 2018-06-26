@@ -157,7 +157,7 @@ emacs.defun(non_local_exit_funcall, 1):
 
 emacs.defun(make_string, 2):
   ## Returns string created by Emacs-Lisp ``make-string``.
-  return Funcall(env, "make-string", [args[0], args[1]])
+  return Funcall(env, "make-string", args[])
 
 emacs.defun(return_t, 1):
   ## Returns ``t``, always.
@@ -205,7 +205,7 @@ emacs.defun(make_cons, 2):
 
 emacs.defun(make_list, 3):
   ## Returns a list made of three input arguments.
-  result = MakeList(env, [args[0], args[1], args[2]])
+  result = MakeList(env, args[])
   # echo strEmacsValue(env, result)
 
 emacs.defun(eq, 2):
