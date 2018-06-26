@@ -52,7 +52,7 @@ proc copyStrNoAssert(env: ptr emacs_env; elispStr: emacs_value): string =
   return str[0 ..< str.high]
 
 
-proc symbolName(env: ptr emacs_env; sym: emacs_value): string =
+proc symbolName*(env: ptr emacs_env; sym: emacs_value): string =
   ## Return the string name for the input Emacs-Lisp symbol.
   let
     fSym = env.intern(env, "symbol-name")
@@ -62,7 +62,7 @@ proc symbolName(env: ptr emacs_env; sym: emacs_value): string =
   return copyStrNoAssert(env, elispStr)
 
 
-proc typeOfEmacsValue(env: ptr emacs_env; val: emacs_value): string =
+proc typeOfEmacsValue*(env: ptr emacs_env; val: emacs_value): string =
   ## Return the type of the input Emacs-Lisp value as string.
   let
     typeSym: emacs_value = env.type_of(env, val)
