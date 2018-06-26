@@ -8,6 +8,8 @@ import emacs_module
 # Forward declarations
 proc symNil*(env: ptr emacs_env): emacs_value
 proc MakeList*(env: ptr emacs_env; listArray: openArray[emacs_value]): emacs_value
+proc Funcall*(env: ptr emacs_env; fName: string; listArgs: openArray[emacs_value]): emacs_value
+proc ExtractBool*(env: ptr emacs_env; inp: emacs_value): bool
 
 
 proc clearExitStatus*(env: ptr emacs_env) =
@@ -72,7 +74,13 @@ proc typeOfEmacsValue*(env: ptr emacs_env; val: emacs_value): string =
   ## Return the type of the input Emacs-Lisp value as string.
   let
     typeSym: emacs_value = env.type_of(env, val)
-  return symbolName(env, typeSym)
+  result = symbolName(env, typeSym)
+  if result == "cons":
+    # Differentiate between list and cons.
+    let elemCdr: emacs_value = Funcall(env, "cdr", [val])
+    # For a list foo (and not cons), (listp (cdr foo)) is non-nil.
+    if ExtractBool(env, Funcall(env, "listp", [elemCdr])):
+      result = "list"
 
 
 proc typeCheck*(env: ptr emacs_env; val: emacs_value; expectedType: string): bool =
@@ -307,27 +315,23 @@ proc strEmacsValue*(env: ptr emacs_env; x: emacs_value): string =
     result = symbolName(env, x)
   of "cons":
     let
+      elemCar: emacs_value = Funcall(env, "car", [x])
       elemCdr: emacs_value = Funcall(env, "cdr", [x])
-      # For a cons foo, (listp (cdr foo)) is nil.
-      isCons = not ExtractBool(env, Funcall(env, "listp", [elemCdr]))
-    if isCons:
-      let
-        elemCar: emacs_value = Funcall(env, "car", [x])
-        elemCarStr = strEmacsValue(env, elemCar)
-        elemCdrStr = strEmacsValue(env, elemCdr)
-      result = "(" & elemCarStr & " . " & elemCdrStr & ")"
-    else:                       # list
-      result = "("
-      let numElems = ExtractInteger(env, Funcall(env, "length", [x]))
-      for i in 0 ..< numElems:
-        var elemNth = Funcall(env, "nth", [MakeInteger(env, i), x])
-        if i == (numElems-1):
-          result.add(strEmacsValue(env, elemNth))
-        else:
-          result.add(strEmacsValue(env, elemNth) & " ")
-      result.add(")")
+      elemCarStr = strEmacsValue(env, elemCar)
+      elemCdrStr = strEmacsValue(env, elemCdr)
+    result = "(" & elemCarStr & " . " & elemCdrStr & ")"
+  of "list":
+    result = "("
+    let numElems = ExtractInteger(env, Funcall(env, "length", [x]))
+    for i in 0 ..< numElems:
+      var elemNth = Funcall(env, "nth", [MakeInteger(env, i), x])
+      if i == (numElems-1):
+        result.add(strEmacsValue(env, elemNth))
+      else:
+        result.add(strEmacsValue(env, elemNth) & " ")
+    result.add(")")
   else:
-    result = ""
+    result = "[printing emacs values of type " & t & " is unsupported]"
 
 
 # http://phst.github.io/emacs-modules.html#make_function
