@@ -6,6 +6,7 @@ import emacs_module
 
 
 # Forward declarations
+proc strEmacsValue(env: ptr emacs_env; x: emacs_value): string
 proc symNil*(env: ptr emacs_env): emacs_value
 proc MakeList*(env: ptr emacs_env; listArray: openArray[emacs_value]): emacs_value
 
@@ -72,6 +73,7 @@ proc typeOfEmacsValue*(env: ptr emacs_env; val: emacs_value): string =
   ## Return the type of the input Emacs-Lisp value as string.
   let
     typeSym: emacs_value = env.type_of(env, val)
+  echo strEmacsValue(env, val)
   return symbolName(env, typeSym)
 
 
@@ -213,12 +215,13 @@ proc CopyStringContents*(env: ptr emacs_env; elispStr: emacs_value): string =
 
 
 # http://phst.github.io/emacs-modules.html#how-to-deal-with-nonlocal-exits-properly
-proc ExtractInteger*(env: ptr emacs_env; inp: emacs_value): int =
+proc ExtractInteger*(env: ptr emacs_env; inp: emacs_value; internalCall = false): int =
   ## Convert Emacs-Lisp integer to an int in Nim, and return it.
   if not isSuccessExitStatus(env):
     return
-  if not typeCheck(env, inp, "integer"):
-    return
+  if not internalCall: # Break recursive call when called from strEmacsValue
+    if not typeCheck(env, inp, "integer"):
+      return
   result = int(env.extract_integer(env, inp))
   if not isSuccessExitStatus(env):
     return
@@ -236,12 +239,13 @@ proc toEmacsValue*(env: ptr emacs_env; inp: int): emacs_value =
   return MakeInteger(env, inp)
 
 
-proc ExtractFloat*(env: ptr emacs_env; inp: emacs_value): float =
+proc ExtractFloat*(env: ptr emacs_env; inp: emacs_value; internalCall = false): float =
   ## Convert Emacs-Lisp float to a float in Nim, and return it.
   if not isSuccessExitStatus(env):
     return
-  if not typeCheck(env, inp, "float"):
-    return
+  if not internalCall: # Break recursive call when called from strEmacsValue
+    if not typeCheck(env, inp, "float"):
+      return
   result = float(env.extract_float(env, inp))
   if not isSuccessExitStatus(env):
     return
@@ -273,6 +277,22 @@ proc toEmacsValue*(env: ptr emacs_env; inp: bool): emacs_value =
 proc MakeList*(env: ptr emacs_env; listArray: openArray[emacs_value]): emacs_value =
   ## Return an Emacs-Lisp ``list``.
   Funcall(env, "list", listArray)
+
+
+proc strEmacsValue(env: ptr emacs_env; x: emacs_value): string =
+  ## Get stringified form of ``emacs_value``.
+  let t = typeOfEmacsValue(env, x)
+  case t
+  of "string":
+    copyStrNoAssert(env, x)
+  of "integer":
+    $ExtractInteger(env, x, internalCall = true)
+  of "float":
+    $ExtractFloat(env, x, internalCall = true)
+  of "symbol":
+    symbolName(env, x)
+  else:
+    "$ unsupported for " & t
 
 
 # http://phst.github.io/emacs-modules.html#make_function
