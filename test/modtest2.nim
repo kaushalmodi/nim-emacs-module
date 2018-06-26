@@ -102,8 +102,7 @@ emacs.defun(globref_make, 0):
 # non_local_exit_check, non_local_exit_signal
 emacs.defun(signal, 0):
   assert(env.non_local_exit_check(env) == emacs_funcall_exit_return)
-  env.non_local_exit_signal(env, Intern(env, "error"),
-                            MakeInteger(env, 100))
+  exitSignalError(env, MakeInteger(env, 100))
 
 # non_local_exit_check, non_local_exit_throw
 emacs.defun(throw, 0):

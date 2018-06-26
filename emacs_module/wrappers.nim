@@ -21,6 +21,9 @@ proc exitSignalError*(env: ptr emacs_env; errorMsg: string) =
     cStr: cstring = errorMsg
     elispStr: emacs_value = env.make_string(env, addr cStr[0], cStr.len)
   env.non_local_exit_signal(env, env.intern(env, "error"), elispStr)
+proc exitSignalError*(env: ptr emacs_env; errorMsg: emacs_value) =
+  ## Send ``error`` signal to Emacs.
+  env.non_local_exit_signal(env, env.intern(env, "error"), errorMsg)
 
 
 proc exitSignalUserError*(env: ptr emacs_env; errorMsg: string) =
