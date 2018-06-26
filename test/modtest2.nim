@@ -29,6 +29,11 @@ import emacs_module/wrappers
 # Force the Emacs-Lisp provided module to be named "modtest".
 init(emacs, "modtest")
 
+# emacs.defun(wrappers_p, 0):
+#   ## This function being defined means that modtest2 (with wrappers)
+#   ## was compiled; used in test-modtest.el
+#   return symT(env)
+
 #[
 struct emacs_env_26
 {
@@ -102,7 +107,7 @@ emacs.defun(globref_make, 0):
 # non_local_exit_check, non_local_exit_signal
 emacs.defun(signal, 0):
   assert(env.non_local_exit_check(env) == emacs_funcall_exit_return)
-  exitSignalError(env, MakeInteger(env, 100))
+  exitSignalError(env, "error", MakeInteger(env, 100))
 
 # non_local_exit_check, non_local_exit_throw
 emacs.defun(throw, 0):
