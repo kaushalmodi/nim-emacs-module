@@ -4,17 +4,31 @@
 from unicode import validateUtf8
 import emacs_module
 
-type
-  NonZeroExitStatus = object of Exception
-  StringError = object of Exception
-  InputError = object of Exception
-  # UserError = object of Exception
+
+# Forward declarations
+proc symNil*(env: ptr emacs_env): emacs_value
 
 
 proc clearExitStatus*(env: ptr emacs_env) =
   ## Clear non-local exit status i.e. reset it to
   ## ``emacs_funcall_exit_return``.
   env.non_local_exit_clear(env)
+
+
+proc exitSignalError*(env: ptr emacs_env; errorMsg: string) =
+  ## Send ``error`` signal to Emacs.
+  var
+    cStr: cstring = errorMsg
+    elispStr: emacs_value = env.make_string(env, addr cStr[0], cStr.len)
+  env.non_local_exit_signal(env, env.intern(env, "error"), elispStr)
+
+
+proc exitSignalUserError*(env: ptr emacs_env; errorMsg: string) =
+  ## Send ``user-error`` signal to Emacs.
+  var
+    cStr: cstring = errorMsg
+    elispStr: emacs_value = env.make_string(env, addr cStr[0], cStr.len)
+  env.non_local_exit_signal(env, env.intern(env, "user-error"), elispStr)
 
 
 proc copyStrNoAssert(env: ptr emacs_env; elispStr: emacs_value): string =
@@ -53,7 +67,7 @@ proc typeOfEmacsValue(env: ptr emacs_env; val: emacs_value): string =
 
 
 proc assertSuccessExitStatus*(env: ptr emacs_env) =
-  ## Raise an exception if the non-local exit check does not return
+  ## Throw exit signal if the non-local exit check does not return
   ## ``emacs_funcall_exit_return``.
   var
     exitSymbol, exitData: emacs_value
@@ -65,35 +79,36 @@ proc assertSuccessExitStatus*(env: ptr emacs_env) =
     var
       exitSymbolStr, exitDataStr = ""
     if typeOfEmacsValue(env, exitSymbol) == "symbol":
-      exitSymbolStr = "[" & symbolName(env, exitSymbol) & "]"
+      exitSymbolStr = "[" & symbolName(env, exitSymbol) & "] "
     if typeOfEmacsValue(env, exitData) == "symbol":
       exitDataStr = symbolName(env, exitData)
-    raise newException(NonZeroExitStatus, "Non-zero exit status " &
-      $exitStatus &
-      " (" & $ord(exitStatus) & "): " &
-      exitSymbolStr &
-      exitDataStr)
+    exitSignalError(env, exitSymbolStr & exitDataStr)
 
 
 # http://phst.github.io/emacs-modules.html#make_string
 proc MakeString*(env: ptr emacs_env; str: string): emacs_value =
   ## Convert a Nim string to an Emacs-Lisp string, and return it.
-  let
-    strLen: ptrdiff_t = str.len
-  if strLen > cast[ptrdiff_t](int.high):
-    raise newException(OverflowError, "String size is too large")
-  if str.validateUtf8 != -1:
-    raise newException(StringError, "Input string is not a valid UTF-8 string")
-  # If the below str variable is declared using a let instead of a
+  # If the below cStr variable is declared using a let instead of a
   # var, unsafeAddr has to be used in the make_string call below
   # instead of addr.
-  var str = str
-  result = env.make_string(env, addr str[0], strLen)
-  env.assertSuccessExitStatus
+  # Making this a cstring is necessary as the minimum required
+  # string length is 1 (when the string is empty, the appended
+  # null-termination in cstring makes the string length 1).
+  var cStr = str.cstring
+  let
+    cStrLen: ptrdiff_t = cStr.len
+  if cStrLen > cast[ptrdiff_t](int.high):
+    exitSignalError(env, "[Overflow] String size is too large")
+    return symNil(env)
+  if str.validateUtf8 != -1:
+    exitSignalError(env, "[StringError] Input string is not a valid UTF-8 string")
+    return symNil(env)
+  result = env.make_string(env, addr cStr[0], cStrLen)
+  assertSuccessExitStatus(env)
 
 
 # http://phst.github.io/emacs-modules.html#intern
-proc Intern*(env: ptr emacs_env; symbolName: string; nimAssert = true): emacs_value =
+proc Intern*(env: ptr emacs_env; symbolName: string; checkExitStatus = true): emacs_value =
   ## Return the Emacs-Lisp symbol for the input ``symbolName`` string.
   ##
   ## Call ``intern`` in the env object directly only if the
@@ -115,28 +130,28 @@ proc Intern*(env: ptr emacs_env; symbolName: string; nimAssert = true): emacs_va
     var
       listArgs: array[1, emacs_value] = [elispStr]
     result = env.funcall(env, fSym, 1, addr listArgs[0])
-  if nimAssert:
-    env.assertSuccessExitStatus
-proc toEmacsValue*(env: ptr emacs_env; inp: string; nimAssert = true): emacs_value =
+  if checkExitStatus:
+    assertSuccessExitStatus(env)
+proc toEmacsValue*(env: ptr emacs_env; inp: string; checkExitStatus = true): emacs_value =
   ## Convert a Nim string to an Emacs-Lisp string, and return it.  If
   ## the string begins with a single-quote, return its interned value
   ## instead.
   let
     hasQuotePrefix = (inp.len >= 2) and (inp[0] == '\39')
   if hasQuotePrefix:
-    return env.Intern(inp[1 .. inp.high], nimAssert)
+    return Intern(env, inp[1 .. inp.high], checkExitStatus)
   else:
-    return env.MakeString(inp)
+    return MakeString(env, inp)
 
 
 proc symNil*(env: ptr emacs_env): emacs_value =
   ## Return Emacs-Lisp ``nil`` symbol.
-  return Intern(env, "nil", nimAssert = false)
+  return Intern(env, "nil", checkExitStatus = false)
 
 
 proc symT*(env: ptr emacs_env): emacs_value =
   ## Return Emacs-Lisp ``t`` symbol.
-  return Intern(env, "t", nimAssert = false)
+  return Intern(env, "t", checkExitStatus = false)
 
 
 proc Funcall*(env: ptr emacs_env; fName: string): emacs_value =
@@ -144,7 +159,7 @@ proc Funcall*(env: ptr emacs_env; fName: string): emacs_value =
   let
     fSym = Intern(env, fName)
   result = env.funcall(env, fSym, 0, nil)
-  env.assertSuccessExitStatus
+  assertSuccessExitStatus(env)
 
 
 # http://phst.github.io/emacs-modules.html#funcall
@@ -155,9 +170,9 @@ proc Funcall*(env: ptr emacs_env; fName: string; listArgs: openArray[emacs_value
     fSym = Intern(env, fName)
     nArgs = listArgs.len
   if nArgs > cast[ptrdiff_t](int.high):
-    raise newException(OverflowError, "Too many arguments")
+    exitSignalError(env, "[OverflowError] Too many arguments")
   result = env.funcall(env, fSym, nArgs, unsafeAddr listArgs[0])
-  env.assertSuccessExitStatus
+  assertSuccessExitStatus(env)
 
 
 # http://phst.github.io/emacs-modules.html#copy_string_contents
@@ -169,68 +184,50 @@ proc CopyStringContents*(env: ptr emacs_env; elispStr: emacs_value): string =
   # because it includes the null-termination too.
   discard env.copy_string_contents(env, elispStr, nil, addr l)
   if l <= 0:
-    raise newException(StringError, "The length of the string passed from Emacs has to be at least 1 " &
-      "(that includes the null termination), but it was " & $l)
-  env.assertSuccessExitStatus
+    exitSignalError(env, "[StringError] The length of the string " &
+      "passed from Emacs has to be at least 1 " &
+      "(that includes the null termination), but " &
+      "it was " & $l)
+    assertSuccessExitStatus(env)
   var
     str = newString(l)
   # *Now* copy the elisp string elispStr to Nim string str.
   discard env.copy_string_contents(env, elispStr, addr str[0], addr l)
-  env.assertSuccessExitStatus
+  assertSuccessExitStatus(env)
   # Return the string without the null termination i.e. without the
   # last character.
   return str[0 ..< str.high]
 
 
 # http://phst.github.io/emacs-modules.html#how-to-deal-with-nonlocal-exits-properly
-proc ExtractInteger*(env: ptr emacs_env; inp: emacs_value; nimAssert = true): int =
+proc ExtractInteger*(env: ptr emacs_env; inp: emacs_value): int =
   ## Convert Emacs-Lisp integer to an int in Nim, and return it.
-  if nimAssert:
-    let
-      inpType = typeOfEmacsValue(env, inp)
-    if inpType != "integer":
-      raise newException(InputError, "Input value from Emacs is of invalid type; integer was expected, but found " &
-        inpType)
-    else:
-      result = int(env.extract_integer(env, inp))
-    env.assertSuccessExitStatus
-  else:
-    result = int(env.extract_integer(env, inp))
+  result = int(env.extract_integer(env, inp))
+  assertSuccessExitStatus(env)
 
 
-proc MakeInteger*(env: ptr emacs_env; i: int; nimAssert = true): emacs_value =
+proc MakeInteger*(env: ptr emacs_env; i: int): emacs_value =
   ## Convert a Nim int to an Emacs-Lisp integer, and return it.
   result = env.make_integer(env, cast[intmax_t](i))
-  if nimAssert:
-    env.assertSuccessExitStatus
-proc toEmacsValue*(env: ptr emacs_env; inp: int; nimAssert = true): emacs_value =
+  assertSuccessExitStatus(env)
+proc toEmacsValue*(env: ptr emacs_env; inp: int): emacs_value =
   ## Convert a Nim int to an Emacs-Lisp integer, and return it.
-  return env.MakeInteger(inp, nimAssert)
+  return MakeInteger(env, inp)
 
 
-proc ExtractFloat*(env: ptr emacs_env; inp: emacs_value; nimAssert = true): float =
+proc ExtractFloat*(env: ptr emacs_env; inp: emacs_value): float =
   ## Convert Emacs-Lisp float to a float in Nim, and return it.
-  if nimAssert:
-    let
-      inpType = typeOfEmacsValue(env, inp)
-    if inpType != "float":
-      raise newException(InputError, "Input value from Emacs is of invalid type; float was expected, but found " &
-        inpType)
-    else:
-      result = float(env.extract_float(env, inp))
-    env.assertSuccessExitStatus
-  else:
-    result = float(env.extract_float(env, inp))
+  result = float(env.extract_float(env, inp))
+  assertSuccessExitStatus(env)
 
 
-proc MakeFloat*(env: ptr emacs_env; f: float; nimAssert = true): emacs_value =
+proc MakeFloat*(env: ptr emacs_env; f: float): emacs_value =
   ## Convert a Nim float to an Emacs-Lisp float, and return it.
   result = env.make_float(env, cast[cdouble](f))
-  if nimAssert:
-    env.assertSuccessExitStatus
-proc toEmacsValue*(env: ptr emacs_env; inp: float; nimAssert = true): emacs_value =
+  assertSuccessExitStatus(env)
+proc toEmacsValue*(env: ptr emacs_env; inp: float): emacs_value =
   ## Convert a Nim float to an Emacs-Lisp float, and return it.
-  return env.MakeFloat(inp, nimAssert)
+  MakeFloat(env, inp)
 
 
 proc MakeBool*(env: ptr emacs_env; b: bool): emacs_value =
@@ -241,7 +238,7 @@ proc MakeBool*(env: ptr emacs_env; b: bool): emacs_value =
     return env.symNil
 proc toEmacsValue*(env: ptr emacs_env; inp: bool): emacs_value =
   ## Convert a Nim bool to an Emacs-Lisp ``t`` or ``nil``.
-  return env.MakeBool(inp)
+  return MakeBool(env, inp)
 
 
 # http://phst.github.io/emacs-modules.html#make_function

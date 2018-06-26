@@ -225,28 +225,12 @@ emacs.defun(sum, 2):
     b = ExtractInteger(env, args[1])
   MakeInteger(env, a + b)
 
-emacs.defun(sum_no_nim_assert, 2):
-  ## Returns the sum of two integers.
-  let
-    nimAssert = false
-    a = ExtractInteger(env, args[0], nimAssert)
-    b = ExtractInteger(env, args[1], nimAssert)
-  MakeInteger(env, a + b, nimAssert)
-
 emacs.defun(sum_float, 2):
   ## Returns the sum of two floats.
   let
     a = ExtractFloat(env, args[0])
     b = ExtractFloat(env, args[1])
   MakeFloat(env, a + b)
-
-emacs.defun(sum_float_no_nim_assert, 2):
-  ## Returns the sum of two floats.
-  let
-    nimAssert = false
-    a = ExtractFloat(env, args[0], nimAssert)
-    b = ExtractFloat(env, args[1], nimAssert)
-  toEmacsValue(env, a + b, nimAssert) # testing toEmacsValue
 
 #[
   /* Create a Lisp string from a utf8 encoded string.  */
