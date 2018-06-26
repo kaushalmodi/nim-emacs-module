@@ -170,6 +170,7 @@ proc Funcall*(env: ptr emacs_env; fName: string; listArgs: openArray[emacs_value
     nArgs = listArgs.len
   if nArgs > cast[ptrdiff_t](int.high):
     exitSignalError(env, "overflow-error", "Too many arguments")
+    return symNil(env)
   result = env.funcall(env, fSym, nArgs, unsafeAddr listArgs[0])
 
 
