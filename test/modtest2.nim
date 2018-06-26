@@ -202,7 +202,13 @@ emacs.defun(is_true, 1):
 
 emacs.defun(make_cons, 2):
   ## Returns a cons made of the two input arguments.
-  MakeCons(env, args[0], args[1])
+  result = MakeCons(env, args[0], args[1])
+  # echo strEmacsValue(env, result)
+
+emacs.defun(make_list, 3):
+  ## Returns a list made of three input arguments.
+  result = MakeList(env, [args[0], args[1], args[2]])
+  # echo strEmacsValue(env, result)
 
 emacs.defun(eq, 2):
   ## Returns ``t`` if both arguments are the same Lisp object, else returns ``nil``.

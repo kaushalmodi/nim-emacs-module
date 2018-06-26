@@ -139,6 +139,11 @@
     (should (equal '(1 . 2) (modtest-make-cons 1 2)))
     (should (equal '("a" . 123) (modtest-make-cons "a" 123)))))
 
+(when (fboundp #'modtest-make-list)
+  (ert-deftest modtest-list ()
+    (should (equal '(1 2 3) (modtest-make-list 1 2 3)))
+    (should (equal '("a" 123 t) (modtest-make-list "a" 123 t)))))
+
 (ert-deftest modtest-uname ()
   (let ((ref-uname-a-output (progn
                               (require 'subr-x)
