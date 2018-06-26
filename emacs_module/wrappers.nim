@@ -263,6 +263,16 @@ proc toEmacsValue*(env: ptr emacs_env; inp: float): emacs_value =
   MakeFloat(env, inp)
 
 
+proc ExtractBool*(env: ptr emacs_env; inp: emacs_value): bool =
+  ## Convert Emacs-Lisp ``nil`` to ``false`` in Nim, and return it.
+  ## The returned value is ``true`` otherwise.
+  if not isSuccessExitStatus(env):
+    return
+  result = true
+  if (typeOfEmacsValue(env, inp) == "symbol") and (symbolName(env, inp) == "nil"):
+    result = false
+
+
 proc MakeBool*(env: ptr emacs_env; b: bool): emacs_value =
   ## Convert a Nim bool to an Emacs-Lisp ``t`` or ``nil``.
   if b:
