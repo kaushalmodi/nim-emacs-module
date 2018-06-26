@@ -131,10 +131,10 @@ emacs.defun(non_local_exit_funcall, 1):
     return elispFuncallRet
   of emacs_funcall_exit_signal:
     env.non_local_exit_clear(env)
-    return env.Funcall("list", [Intern(env, "signal"), non_local_exit_symbol, non_local_exit_data])
+    return MakeList(env, [Intern(env, "signal"), non_local_exit_symbol, non_local_exit_data])
   of emacs_funcall_exit_throw:
     env.non_local_exit_clear(env)
-    return env.Funcall("list", [Intern(env, "throw"), non_local_exit_symbol, non_local_exit_data])
+    return MakeList(env, [Intern(env, "throw"), non_local_exit_symbol, non_local_exit_data])
 
 #[
   /* Function registration.  */

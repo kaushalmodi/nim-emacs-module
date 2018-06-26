@@ -244,6 +244,11 @@ proc toEmacsValue*(env: ptr emacs_env; inp: bool): emacs_value =
   return MakeBool(env, inp)
 
 
+proc MakeList*(env: ptr emacs_env; listArray: openArray[emacs_value]): emacs_value =
+  ## Return an Emacs-Lisp ``list``.
+  Funcall(env, "list", listArray)
+
+
 # http://phst.github.io/emacs-modules.html#make_function
 # See if the defun template can add more stuff from the suggested
 # defun wrapper.
