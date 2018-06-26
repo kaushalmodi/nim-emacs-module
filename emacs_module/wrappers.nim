@@ -121,7 +121,7 @@ proc Intern*(env: ptr emacs_env; symbolName: string; checkExitStatus = true): em
   var
     simple = true
   for c in symbolName:
-    if ord(c) < 1 or ord(c) > 127:
+    if c notin {'\1' .. '\127'}:
       simple = false
       break
   if simple:
