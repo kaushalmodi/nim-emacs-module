@@ -181,6 +181,12 @@ proc Funcall*(env: ptr emacs_env; fName: string; listArgs: openArray[emacs_value
 # http://phst.github.io/emacs-modules.html#copy_string_contents
 proc CopyStringContents*(env: ptr emacs_env; elispStr: emacs_value): string =
   ## Copy Emacs-Lisp string ``elispStr`` to a Nim string, and return it.
+  let
+    argType = typeOfEmacsValue(env, elispStr)
+  if argType != "string":
+    exitSignalError(env, "[InvalidInputType] Input needs to be a string, " &
+      "but " & argType & " was found")
+    return ""
   var
     l: ptrdiff_t
   # Get the length of the elisp string elispStr. It's num chars + 1
