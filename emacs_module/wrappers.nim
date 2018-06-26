@@ -32,6 +32,12 @@ proc exitSignalError*(env: ptr emacs_env; errorType: string; errorVal: emacs_val
   env.non_local_exit_signal(env, env.intern(env, errorType), errorVal)
 
 
+proc isSuccessExitStatus*(env: ptr emacs_env): bool =
+  ## Return ``true`` if the current exit status is success.
+  let exitStatus: emacs_funcall_exit = env.non_local_exit_check(env)
+  return (exitStatus == emacs_funcall_exit_return)
+
+
 proc copyStrNoAssert(env: ptr emacs_env; elispStr: emacs_value): string =
   ## Copy Emacs-Lisp string ``elispStr`` to a Nim string, and return it.
   var
@@ -57,6 +63,8 @@ proc symbolName*(env: ptr emacs_env; sym: emacs_value): string =
   var
     listArgs: array[1, emacs_value] = [sym]
     elispStr = env.funcall(env, fSym, 1, addr listArgs[0])
+  if not isSuccessExitStatus(env):
+    return ""
   return copyStrNoAssert(env, elispStr)
 
 
@@ -77,12 +85,6 @@ proc typeCheck*(env: ptr emacs_env; val: emacs_value; expectedType: string): boo
     exitSignalError(env, "wrong-type-argument",
                     "Input is of type `" & argType & "' instead of `" &
                       expectedType & "'")
-
-
-proc isSuccessExitStatus*(env: ptr emacs_env): bool =
-  ## Return ``true`` if the current exit status is success.
-  let exitStatus: emacs_funcall_exit = env.non_local_exit_check(env)
-  result = (exitStatus == emacs_funcall_exit_return)
 
 
 # http://phst.github.io/emacs-modules.html#make_string
@@ -132,6 +134,8 @@ proc Intern*(env: ptr emacs_env; symbolName: string): emacs_value =
     var
       listArgs: array[1, emacs_value] = [elispStr]
     result = env.funcall(env, fSym, 1, addr listArgs[0])
+  # Do NOT check for isSuccessExitStatus here.
+
 proc toEmacsValue*(env: ptr emacs_env; inp: string): emacs_value =
   ## Convert a Nim string to an Emacs-Lisp string, and return it.  If
   ## the string begins with a single-quote, return its interned value
@@ -159,6 +163,8 @@ proc Funcall*(env: ptr emacs_env; fName: string): emacs_value =
   let
     fSym = Intern(env, fName)
   result = env.funcall(env, fSym, 0, nil)
+  if not isSuccessExitStatus(env):
+    return symNil(env)
 
 
 # http://phst.github.io/emacs-modules.html#funcall
@@ -172,6 +178,8 @@ proc Funcall*(env: ptr emacs_env; fName: string; listArgs: openArray[emacs_value
     exitSignalError(env, "overflow-error", "Too many arguments")
     return symNil(env)
   result = env.funcall(env, fSym, nArgs, unsafeAddr listArgs[0])
+  if not isSuccessExitStatus(env):
+    return symNil(env)
 
 
 # http://phst.github.io/emacs-modules.html#copy_string_contents
@@ -212,6 +220,8 @@ proc ExtractInteger*(env: ptr emacs_env; inp: emacs_value): int =
   if not typeCheck(env, inp, "integer"):
     return
   result = int(env.extract_integer(env, inp))
+  if not isSuccessExitStatus(env):
+    return
 
 
 proc MakeInteger*(env: ptr emacs_env; i: int): emacs_value =
@@ -219,6 +229,8 @@ proc MakeInteger*(env: ptr emacs_env; i: int): emacs_value =
   if not isSuccessExitStatus(env):
     return symNil(env)
   result = env.make_integer(env, cast[intmax_t](i))
+  if not isSuccessExitStatus(env):
+    return symNil(env)
 proc toEmacsValue*(env: ptr emacs_env; inp: int): emacs_value =
   ## Convert a Nim int to an Emacs-Lisp integer, and return it.
   return MakeInteger(env, inp)
@@ -231,6 +243,8 @@ proc ExtractFloat*(env: ptr emacs_env; inp: emacs_value): float =
   if not typeCheck(env, inp, "float"):
     return
   result = float(env.extract_float(env, inp))
+  if not isSuccessExitStatus(env):
+    return
 
 
 proc MakeFloat*(env: ptr emacs_env; f: float): emacs_value =
@@ -238,6 +252,8 @@ proc MakeFloat*(env: ptr emacs_env; f: float): emacs_value =
   if not isSuccessExitStatus(env):
     return symNil(env)
   result = env.make_float(env, cast[cdouble](f))
+  if not isSuccessExitStatus(env):
+    return symNil(env)
 proc toEmacsValue*(env: ptr emacs_env; inp: float): emacs_value =
   ## Convert a Nim float to an Emacs-Lisp float, and return it.
   MakeFloat(env, inp)
