@@ -61,12 +61,7 @@ proc copyStrNoAssert(env: ptr emacs_env; elispStr: emacs_value): string =
 proc symbolName*(env: ptr emacs_env; sym: emacs_value): string =
   ## Return the string name for the input Emacs-Lisp symbol.
   let
-    fSym = env.intern(env, "symbol-name")
-  var
-    listArgs: array[1, emacs_value] = [sym]
-    elispStr = env.funcall(env, fSym, 1, addr listArgs[0])
-  if not isSuccessExitStatus(env):
-    return ""
+    elispStr = Funcall(env, "symbol-name", [sym])
   return copyStrNoAssert(env, elispStr)
 
 
@@ -135,15 +130,12 @@ proc Intern*(env: ptr emacs_env; symbolName: string): emacs_value =
       break
   if simple:
     result = env.intern(env, symbolName)
+    if not isSuccessExitStatus(env):
+      return env.intern(env, "nil")
   else:
     let
-      fSym = Intern(env, "intern")
       elispStr = MakeString(env, symbolName)
-    var
-      listArgs: array[1, emacs_value] = [elispStr]
-    result = env.funcall(env, fSym, 1, addr listArgs[0])
-  # Do NOT check for isSuccessExitStatus here.
-
+    return Funcall(env, "intern", [elispStr])
 proc toEmacsValue*(env: ptr emacs_env; inp: string): emacs_value =
   ## Convert a Nim string to an Emacs-Lisp string, and return it.  If
   ## the string begins with a single-quote, return its interned value
@@ -282,9 +274,9 @@ proc ExtractBool*(env: ptr emacs_env; inp: emacs_value): bool =
 proc MakeBool*(env: ptr emacs_env; b: bool): emacs_value =
   ## Convert a Nim bool to an Emacs-Lisp ``t`` or ``nil``.
   if b:
-    return env.symT
+    return symT(env)
   else:
-    return env.symNil
+    return symNil(env)
 proc toEmacsValue*(env: ptr emacs_env; inp: bool): emacs_value =
   ## Convert a Nim bool to an Emacs-Lisp ``t`` or ``nil``.
   return MakeBool(env, inp)
