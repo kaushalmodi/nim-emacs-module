@@ -21,6 +21,7 @@ proc exitSignalError*(env: ptr emacs_env; errorType, errorMsg: string) =
   var
     cStr: cstring = errorMsg
     elispStr: emacs_value = env.make_string(env, addr cStr[0], cStr.len)
+  # echo " >> ", errorType, ": ", cStr
   # If a non-local exit signal is pending, env.non_local_exit_signal
   # does nothing. So clear any pending signal first.
   clearExitStatus(env)
@@ -78,21 +79,10 @@ proc typeCheck*(env: ptr emacs_env; val: emacs_value; expectedType: string): boo
                       expectedType & "'")
 
 
-proc assertSuccessExitStatus*(env: ptr emacs_env) =
-  ## Throw exit signal if the non-local exit check does not return
-  ## ``emacs_funcall_exit_return``.
-  var
-    exitSymbol, exitData: emacs_value
-  let
-    exitStatus: emacs_funcall_exit = env.non_local_exit_get(env,
-                                                            addr exitSymbol,
-                                                            addr exitData)
-  if not (exitStatus == emacs_funcall_exit_return):
-    var
-      exitSymbolStr = "error"
-    if typeOfEmacsValue(env, exitSymbol) == "symbol":
-      exitSymbolStr = symbolName(env, exitSymbol)
-    exitSignalError(env, exitSymbolStr, exitData)
+proc isSuccessExitStatus*(env: ptr emacs_env): bool =
+  ## Return ``true`` if the current exit status is success.
+  let exitStatus: emacs_funcall_exit = env.non_local_exit_check(env)
+  result = (exitStatus == emacs_funcall_exit_return)
 
 
 # http://phst.github.io/emacs-modules.html#make_string
@@ -104,7 +94,8 @@ proc MakeString*(env: ptr emacs_env; str: string): emacs_value =
   # Making this a cstring is necessary as the minimum required
   # string length is 1 (when the string is empty, the appended
   # null-termination in cstring makes the string length 1).
-  var cStr = str.cstring
+  var
+    cStr = str.cstring
   let
     cStrLen: ptrdiff_t = cStr.len
   if cStrLen > cast[ptrdiff_t](int.high):
@@ -114,11 +105,12 @@ proc MakeString*(env: ptr emacs_env; str: string): emacs_value =
     exitSignalError(env, "string-error", "Input string is not a valid UTF-8 string")
     return symNil(env)
   result = env.make_string(env, addr cStr[0], cStrLen)
-  assertSuccessExitStatus(env)
+  if not isSuccessExitStatus(env):
+    return symNil(env)
 
 
 # http://phst.github.io/emacs-modules.html#intern
-proc Intern*(env: ptr emacs_env; symbolName: string; checkExitStatus = true): emacs_value =
+proc Intern*(env: ptr emacs_env; symbolName: string): emacs_value =
   ## Return the Emacs-Lisp symbol for the input ``symbolName`` string.
   ##
   ## Call ``intern`` in the env object directly only if the
@@ -140,28 +132,26 @@ proc Intern*(env: ptr emacs_env; symbolName: string; checkExitStatus = true): em
     var
       listArgs: array[1, emacs_value] = [elispStr]
     result = env.funcall(env, fSym, 1, addr listArgs[0])
-  if checkExitStatus:
-    assertSuccessExitStatus(env)
-proc toEmacsValue*(env: ptr emacs_env; inp: string; checkExitStatus = true): emacs_value =
+proc toEmacsValue*(env: ptr emacs_env; inp: string): emacs_value =
   ## Convert a Nim string to an Emacs-Lisp string, and return it.  If
   ## the string begins with a single-quote, return its interned value
   ## instead.
   let
     hasQuotePrefix = (inp.len >= 2) and (inp[0] == '\39')
   if hasQuotePrefix:
-    return Intern(env, inp[1 .. inp.high], checkExitStatus)
+    return Intern(env, inp[1 .. inp.high])
   else:
     return MakeString(env, inp)
 
 
 proc symNil*(env: ptr emacs_env): emacs_value =
   ## Return Emacs-Lisp ``nil`` symbol.
-  return Intern(env, "nil", checkExitStatus = false)
+  return Intern(env, "nil")
 
 
 proc symT*(env: ptr emacs_env): emacs_value =
   ## Return Emacs-Lisp ``t`` symbol.
-  return Intern(env, "t", checkExitStatus = false)
+  return Intern(env, "t")
 
 
 proc Funcall*(env: ptr emacs_env; fName: string): emacs_value =
@@ -169,7 +159,6 @@ proc Funcall*(env: ptr emacs_env; fName: string): emacs_value =
   let
     fSym = Intern(env, fName)
   result = env.funcall(env, fSym, 0, nil)
-  assertSuccessExitStatus(env)
 
 
 # http://phst.github.io/emacs-modules.html#funcall
@@ -182,7 +171,6 @@ proc Funcall*(env: ptr emacs_env; fName: string; listArgs: openArray[emacs_value
   if nArgs > cast[ptrdiff_t](int.high):
     exitSignalError(env, "overflow-error", "Too many arguments")
   result = env.funcall(env, fSym, nArgs, unsafeAddr listArgs[0])
-  assertSuccessExitStatus(env)
 
 
 # http://phst.github.io/emacs-modules.html#copy_string_contents
@@ -195,18 +183,21 @@ proc CopyStringContents*(env: ptr emacs_env; elispStr: emacs_value): string =
   # Get the length of the elisp string elispStr. It's num chars + 1
   # because it includes the null-termination too.
   discard env.copy_string_contents(env, elispStr, nil, addr l)
+  if not isSuccessExitStatus(env):
+    return ""
   if l <= 0:
     exitSignalError(env, "string-error",
                     "The length of the string " &
                       "passed from Emacs has to be at least 1 " &
                       "(that includes the null termination), but " &
                       "it was " & $l)
-    assertSuccessExitStatus(env)
+    return ""
   var
     str = newString(l)
   # *Now* copy the elisp string elispStr to Nim string str.
   discard env.copy_string_contents(env, elispStr, addr str[0], addr l)
-  assertSuccessExitStatus(env)
+  if not isSuccessExitStatus(env):
+    return ""
   # Return the string without the null termination i.e. without the
   # last character.
   return str[0 ..< str.high]
@@ -215,6 +206,8 @@ proc CopyStringContents*(env: ptr emacs_env; elispStr: emacs_value): string =
 # http://phst.github.io/emacs-modules.html#how-to-deal-with-nonlocal-exits-properly
 proc ExtractInteger*(env: ptr emacs_env; inp: emacs_value): int =
   ## Convert Emacs-Lisp integer to an int in Nim, and return it.
+  if not isSuccessExitStatus(env):
+    return
   if not typeCheck(env, inp, "integer"):
     return
   result = int(env.extract_integer(env, inp))
@@ -222,6 +215,8 @@ proc ExtractInteger*(env: ptr emacs_env; inp: emacs_value): int =
 
 proc MakeInteger*(env: ptr emacs_env; i: int): emacs_value =
   ## Convert a Nim int to an Emacs-Lisp integer, and return it.
+  if not isSuccessExitStatus(env):
+    return symNil(env)
   result = env.make_integer(env, cast[intmax_t](i))
 proc toEmacsValue*(env: ptr emacs_env; inp: int): emacs_value =
   ## Convert a Nim int to an Emacs-Lisp integer, and return it.
@@ -230,6 +225,8 @@ proc toEmacsValue*(env: ptr emacs_env; inp: int): emacs_value =
 
 proc ExtractFloat*(env: ptr emacs_env; inp: emacs_value): float =
   ## Convert Emacs-Lisp float to a float in Nim, and return it.
+  if not isSuccessExitStatus(env):
+    return
   if not typeCheck(env, inp, "float"):
     return
   result = float(env.extract_float(env, inp))
@@ -237,6 +234,8 @@ proc ExtractFloat*(env: ptr emacs_env; inp: emacs_value): float =
 
 proc MakeFloat*(env: ptr emacs_env; f: float): emacs_value =
   ## Convert a Nim float to an Emacs-Lisp float, and return it.
+  if not isSuccessExitStatus(env):
+    return symNil(env)
   result = env.make_float(env, cast[cdouble](f))
 proc toEmacsValue*(env: ptr emacs_env; inp: float): emacs_value =
   ## Convert a Nim float to an Emacs-Lisp float, and return it.
