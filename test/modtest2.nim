@@ -93,15 +93,15 @@ emacs.defun(globref_make, 0):
 
 # non_local_exit_check, non_local_exit_signal
 emacs.defun(signal, 0):
-  assert(env.non_local_exit_check(env) == emacs_funcall_exit_return)
+  assert isSuccessExitStatus(env)
   exitSignalError(env, "error", MakeInteger(env, 100))
 
 # non_local_exit_check, non_local_exit_throw
 emacs.defun(throw, 0):
-  assert(env.non_local_exit_check(env) == emacs_funcall_exit_return)
+  assert isSuccessExitStatus(env)
   env.non_local_exit_throw(env, toEmacsValue(env, "'tag"), # testing toEmacsValue
                            toEmacsValue(env, 42))          # testing toEmacsValue
-  return env.symNil
+  return symNil(env)
 
 # non_local_exit_get, non_local_exit_clear
 emacs.defun(non_local_exit_funcall, 1):
@@ -122,10 +122,10 @@ emacs.defun(non_local_exit_funcall, 1):
   of emacs_funcall_exit_return:
     return elispFuncallRet
   of emacs_funcall_exit_signal:
-    env.non_local_exit_clear(env)
+    clearExitStatus(env)
     return MakeList(env, [Intern(env, "signal"), non_local_exit_symbol, non_local_exit_data])
   of emacs_funcall_exit_throw:
-    env.non_local_exit_clear(env)
+    clearExitStatus(env)
     return MakeList(env, [Intern(env, "throw"), non_local_exit_symbol, non_local_exit_data])
 
 #[
@@ -157,13 +157,11 @@ emacs.defun(non_local_exit_funcall, 1):
 
 emacs.defun(make_string, 2):
   ## Returns string created by Emacs-Lisp ``make-string``.
-  let
-    fSymbol = Intern(env, "make-string") # Get 'make-string
-  return env.funcall(env, fSymbol, nargs, addr args[0]) # Return the (funcall make-string ..) returned elisp string
+  return Funcall(env, "make-string", [args[0], args[1]])
 
 emacs.defun(return_t, 1):
   ## Returns ``t``, always.
-  env.symT
+  symT(env)
 
 #[
   /* Type conversion.  */
@@ -213,7 +211,7 @@ emacs.defun(make_list, 3):
 emacs.defun(eq, 2):
   ## Returns ``t`` if both arguments are the same Lisp object, else returns ``nil``.
   ## Note that this returns the value of Emacs-Lisp ``eq``, not ``equal``.
-  env.toEmacsValue(env.eq(env, args[0], args[1])) # testing toEmacsValue
+  toEmacsValue(env, env.eq(env, args[0], args[1])) # testing toEmacsValue
 
 emacs.defun(sum, 2):
   ## Returns the sum of two integers.
@@ -401,8 +399,8 @@ emacs.defun(vector_eq, 2):
     size = env.vec_size(env, vec)
   for i in 0 ..< size:
     if not env.eq(env, env.vec_get(env, vec, i), val):
-      result = env.symNil
-  result = env.symT
+      result = symNil(env)
+  result = symT(env)
 
 # vec_size, vec_set
 emacs.defun(vector_fill, 2):
@@ -413,7 +411,7 @@ emacs.defun(vector_fill, 2):
 
   for i in 0 ..< size:
     env.vec_set(env, vec, i, val)
-  result = env.symT
+  result = symT(env)
 
 #[
   /* Returns whether a quit is pending.  */
