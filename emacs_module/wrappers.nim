@@ -6,7 +6,6 @@ import emacs_module
 
 
 # Forward declarations
-proc strEmacsValue(env: ptr emacs_env; x: emacs_value): string
 proc symNil*(env: ptr emacs_env): emacs_value
 proc MakeList*(env: ptr emacs_env; listArray: openArray[emacs_value]): emacs_value
 
@@ -73,7 +72,6 @@ proc typeOfEmacsValue*(env: ptr emacs_env; val: emacs_value): string =
   ## Return the type of the input Emacs-Lisp value as string.
   let
     typeSym: emacs_value = env.type_of(env, val)
-  echo strEmacsValue(env, val)
   return symbolName(env, typeSym)
 
 
@@ -294,20 +292,42 @@ proc MakeCons*(env: ptr emacs_env; consCar, consCdr: emacs_value): emacs_value =
   Funcall(env, "cons", [consCar, consCdr])
 
 
-proc strEmacsValue(env: ptr emacs_env; x: emacs_value): string =
+proc strEmacsValue*(env: ptr emacs_env; x: emacs_value): string =
   ## Get stringified form of ``emacs_value``.
   let t = typeOfEmacsValue(env, x)
+  # echo "type = ", t
   case t
   of "string":
-    copyStrNoAssert(env, x)
+    result = "\"" & copyStrNoAssert(env, x) & "\""
   of "integer":
-    $ExtractInteger(env, x, internalCall = true)
+    result = $ExtractInteger(env, x, internalCall = true)
   of "float":
-    $ExtractFloat(env, x, internalCall = true)
+    result = $ExtractFloat(env, x, internalCall = true)
   of "symbol":
-    symbolName(env, x)
+    result = symbolName(env, x)
+  of "cons":
+    let
+      elemCdr: emacs_value = Funcall(env, "cdr", [x])
+      # For a cons foo, (listp (cdr foo)) is nil.
+      isCons = not ExtractBool(env, Funcall(env, "listp", [elemCdr]))
+    if isCons:
+      let
+        elemCar: emacs_value = Funcall(env, "car", [x])
+        elemCarStr = strEmacsValue(env, elemCar)
+        elemCdrStr = strEmacsValue(env, elemCdr)
+      result = "(" & elemCarStr & " . " & elemCdrStr & ")"
+    else:                       # list
+      result = "("
+      let numElems = ExtractInteger(env, Funcall(env, "length", [x]))
+      for i in 0 ..< numElems:
+        var elemNth = Funcall(env, "nth", [MakeInteger(env, i), x])
+        if i == (numElems-1):
+          result.add(strEmacsValue(env, elemNth))
+        else:
+          result.add(strEmacsValue(env, elemNth) & " ")
+      result.add(")")
   else:
-    "$ unsupported for " & t
+    result = ""
 
 
 # http://phst.github.io/emacs-modules.html#make_function
