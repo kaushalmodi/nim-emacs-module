@@ -52,7 +52,8 @@ emacs.defun(globref_make, 0):
   var str: string = ""
   for i in 0 ..< (26 * 100):
     str.add(char('a'.ord + (i mod 26)))
-  let lispStr = env.make_string(env, addr str[0], str.len)
+  var cStr = str.cstring
+  let lispStr = env.make_string(env, addr cStr[0], cStr.len)
   return env.make_global_ref(env, lispStr)
 
 #[
@@ -253,8 +254,8 @@ emacs.defun(sum_float, 2):
 # make_string
 emacs.defun(lazy, 0):
   ## Returns a string constant.
-  var str = "The quick brown fox jumped over the lazy dog."
-  return env.make_string(env, addr str[0], str.len)
+  var cStr = "The quick brown fox jumped over the lazy dog.".cstring
+  return env.make_string(env, addr cStr[0], cStr.len)
 
 #[
   /* Copy the content of the Lisp string VALUE to BUFFER as an utf8
@@ -285,8 +286,9 @@ emacs.defun(hello, 1):
     if (env.copy_string_contents(env, args[0], addr name[0], addr l)): # *Now* copy the elisp string args[0] to Nim string name.
       # This name var will always have null-termination as the last
       # character. So remove that first, and then prepend "Hello " to that.
-      var res = "Hello " & name[0 ..< name.high] # Create a new Nim string res using the name string.
-      return env.make_string(env, addr res[0], res.len) # Convert the Nim string res to elisp string before returning.
+      let res = "Hello " & name[0 ..< name.high] # Create a new Nim string res using the name string.
+      var cRes = res.cstring # Convert Nim string to cstring
+      return env.make_string(env, addr cRes[0], cRes.len) # Convert the cstring cRes to elisp string before returning.
 
 from osproc import execCmdEx
 from strutils import strip
@@ -298,7 +300,8 @@ emacs.defun(uname, 1):
     if (env.copy_string_contents(env, args[0], addr unameArg[0], addr l)):
       var (res, _) = execCmdEx("uname " & unameArg[0 ..< unameArg.high])
       res = res.strip()
-      result = env.make_string(env, addr res[0], res.len)
+      var cRes = res.cstring
+      return env.make_string(env, addr cRes[0], cRes.len)
 
 # /* Return a copy of the argument string where every 'a' is replaced
 #    with 'b'.  */
