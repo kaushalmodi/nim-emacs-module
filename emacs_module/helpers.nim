@@ -87,7 +87,7 @@ emacs_module_init (struct emacs_runtime *ert)
 """, self.functions, self.libName)
 
 
-template provide*(self: Emacs): typed {.dirty.} =
+template provide*(self: Emacs) {.dirty.} =
   const temp = `self`.provideString()
   {.emit: temp.}
 
