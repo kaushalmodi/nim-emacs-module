@@ -98,9 +98,9 @@ template init*(sym: untyped, libNameCustom = ""): untyped {.dirty.} =
   var `sym` {.compileTime.} = Emacs()
 
   static:
-    let info = instantiationInfo()
     `sym`.functions = ""
     when libNameCustom == "":
+      let info = instantiationInfo()
       # If the file name is foo.nim, set the libary name to foo.
       `sym`.libName = splitFile(info.filename).name
     else:
