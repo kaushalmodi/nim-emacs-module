@@ -1,4 +1,4 @@
-import strutils
+import strutils, strformat
 
 # `plugin_is_GPL_compatible` indicates that its code is released under
 # the GPL or compatible license.
@@ -17,14 +17,14 @@ proc pushFunction*(self: var Emacs, fn: string, max_args: int) =
   let
     emacs_func = replace(self.libName & "-" & fn, "_", "-")
     nim_func = "nimEmacs_" & self.libName & "_" & fn
+    documentation = "NULL"
+    dataPtr = "NULL"
 
-  self.functions.add(
-    format("""DEFUN ("$1", $2, $3, $4, NULL, NULL);""",
-           emacs_func, nim_func, max_args, max_args)
-  )
+  self.functions.add(&"""DEFUN ("{emacs_func}", {nim_func}, {max_args}, {max_args}, {documentation}, {dataPtr});
+""")
 
 
-template defun*(self: Emacs; fsym: untyped; max_args: int; body: untyped) {.dirty.} = ## \
+template defun*(self: Emacs; fsym: untyped; max_args: int; body: untyped) {.dirty.} =
   ## emacs_func(env: ptr emacs_env, nargs: ptrdiff_t,
   ## args: ptr array[0..max_args, emacs_value], data: pointer):
   ## emacs_value {.exportc.}
