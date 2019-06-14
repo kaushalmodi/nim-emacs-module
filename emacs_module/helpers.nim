@@ -1,4 +1,5 @@
-import strutils, strformat
+import strformat
+from strutils import replace, `%`
 
 # `plugin_is_GPL_compatible` indicates that its code is released under
 # the GPL or compatible license.
@@ -41,8 +42,8 @@ template defun*(self: Emacs; fsym: untyped; max_args: int; body: untyped) {.dirt
     body
 
 
-proc provideString* (self: Emacs): string =
-  format("""
+proc provideString*(self: Emacs): string =
+  """
 /* Lisp utilities for easier readability (simple wrappers).  */
 
 /* Provide FEATURE to Emacs.  */
@@ -84,7 +85,7 @@ emacs_module_init (struct emacs_runtime *ert)
   return 0;
 
 }
-""", self.functions, self.libName)
+""" % [self.functions, self.libName]
 
 
 template provide*(self: Emacs) {.dirty.} =
