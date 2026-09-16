@@ -55,6 +55,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Code:
 
+(require 'cl-lib)                       ;For `cl-case'
 (require 'subr-x)
 (require 'let-alist)
 
@@ -98,8 +99,8 @@ emacs.defun(return_t, 1):
   "Additional template.")
 
 (defvar nim-emacs-module-dir
-  (when-let ((pkg (locate-library "nim-emacs-module")))
-    (file-name-directory pkg))
+  (let ((pkg (locate-library "nim-emacs-module")))
+    (and pkg (file-name-directory pkg)))
   "Directly where the nim-emacs-module.nim is placed.")
 
 (defvar nim-emacs-module-module-h-dir
@@ -122,13 +123,14 @@ emacs.defun(return_t, 1):
   "Insert template for nim-emacs-module."
   (interactive)
   (let-alist nim-emacs-module-template-example
-    (let ((example .example)
-          (test (if (string< "" .test)
-                    (format .test (file-name-base))
-                  "")))
+    (let* ((base (file-name-base (or (buffer-file-name) (buffer-name))))
+           (example .example)
+           (test (if (string< "" .test)
+                     (format .test base)
+                   "")))
       (insert (format nim-emacs-module-template
                       example
-                      (file-name-base)
+                      base
                       test)))))
 
 ;;;###autoload
