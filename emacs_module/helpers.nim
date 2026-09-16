@@ -1,5 +1,4 @@
-import strformat
-from strutils import replace, `%`
+import std/[strutils, strformat]
 
 # `plugin_is_GPL_compatible` indicates that its code is released under
 # the GPL or compatible license.
@@ -12,33 +11,33 @@ type Emacs* = object
   libName*: string
 
 
-proc pushFunction*(self: var Emacs, fn: string, max_args: int) =
-  ## Push function name ``fn`` to ``functions`` object.
+proc pushFunction*(self: var Emacs, fName: string, maxArgs: int) =
+  ## Push function name ``fName`` to ``functions`` object.
   ## This variable is used later by ``provide`` proc.
   let
-    emacs_func = replace(self.libName & "-" & fn, "_", "-")
-    nim_func = "nimEmacs_" & self.libName & "_" & fn
-    documentation = "NULL"
+    nimFunc = "nimEmacs_" & self.libName & "_" & fName
+    emacsFunc = replace(self.libName & "-" & fName, "_", "-")
+    documentation = "NULL" # FIXME: assign the Nim docstring of the defun once the `defun` template is converted to a macro
     dataPtr = "NULL"
 
-  self.functions.add(&"""DEFUN ("{emacs_func}", {nim_func}, {max_args}, {max_args}, {documentation}, {dataPtr});
+  self.functions.add(&"""DEFUN ("{emacsFunc}", {nimFunc}, {maxArgs}, {maxArgs}, {documentation}, {dataPtr});
 """)
 
 
-template defun*(self: Emacs; fsym: untyped; max_args: int; body: untyped) {.dirty.} =
+template defun*(self: Emacs; fSym: untyped; maxArgs: int; body: untyped) {.dirty.} =
   ## emacs_func(env: ptr emacs_env, nargs: ptrdiff_t,
-  ## args: ptr array[0..max_args, emacs_value], data: pointer):
+  ## args: ptr array[0..maxArgs, emacs_value], data: pointer):
   ## emacs_value {.exportc.}
-  ## The `fsym` is registered as the name in emacs and also
+  ## The `fSym` is registered as the name in emacs and also
   ## be registered in Nim with nimEmacs prefix.
   ## If you include "_" in the function name, it will be converted "-"
   ## in Emacs.
   static:
-    self.pushFunction(astToStr(fsym), max_args)
+    self.pushFunction(astToStr(fSym), maxArgs)
 
-  proc `fsym`*(env: ptr emacs_env, nargs: ptrdiff_t,
-               args: ptr array[max_args, emacs_value],
-               data: pointer): emacs_value {.exportc,extern: "nimEmacs_" & self.libName & "_$1".} =
+  proc `fSym`*(env: ptr emacs_env, nargs: ptrdiff_t,
+               args: ptr array[maxArgs, emacs_value],
+               data: pointer): emacs_value {.exportc, extern: "nimEmacs_" & self.libName & "_$1".} =
     body
 
 
@@ -67,6 +66,9 @@ bind_function (emacs_env *env, const char *name, emacs_value Sfun)
 
   env->funcall (env, Qfset, 2, args);
 }
+
+/* Nim's init function; defined later in this generated file.  */
+extern void NimMain (void);
 
 /* Module init function.  */
 int

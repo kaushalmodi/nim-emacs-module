@@ -12,6 +12,7 @@ something wrong... So beware. (PRs are welcome!)
 ** Requirements
 - Emacs with version 25.1 or higher compiled with the =--with-modules=
   configure option.
+- Nim 2.x (tested with Nim 2.3.1).
 ** GPL compatibility
 In order for Emacs to load Dynamic Modules, like the ones created
 using this package, the modules need to export a symbol named
